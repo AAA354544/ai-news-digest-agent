@@ -9,19 +9,7 @@ This project aims to build an agent that collects AI-related news from the past 
 Complete a 3-4 day collaboration MVP with clear modular architecture and iterative delivery.
 
 ## Current Status
-**Module 0: Project Skeleton**
-
-Implemented in this module:
-- Open-source-friendly folder structure
-- Basic configuration placeholders
-- Minimal Streamlit demo page
-- Minimal CLI entrypoint
-- Documentation and environment template
-
-Not implemented yet:
-- Real fetching/parsing logic
-- Real LLM processing
-- Real email delivery
+Current implementation is progressing in modules. Core scaffolding, config/models, fetchers, and rule-based preprocessing are in place. LLM analysis layer is introduced in Module 4.
 
 ## Tech Stack (Planned)
 - Python
@@ -29,8 +17,8 @@ Not implemented yet:
 - Typer + Rich (CLI)
 - Pydantic + dotenv + YAML config
 - Requests/feedparser/BeautifulSoup/trafilatura (data ingestion)
-- Jinja2 (HTML generation)
 - OpenAI-compatible API clients (provider-switchable)
+- Jinja2 (HTML generation)
 
 ## Directory Structure
 ```text
@@ -73,33 +61,37 @@ Not implemented yet:
 pip install -r requirements.txt
 ```
 
-2. Run CLI
+2. Run module tests in sequence
 ```bash
-python cli.py status
+python tests/manual_test_fetchers.py
+python tests/manual_test_cleaner.py
+python tests/manual_test_llm.py
 ```
 
-3. Run Streamlit demo
+3. Run Streamlit demo page
 ```bash
 streamlit run app.py
 ```
 
 ## Environment Variables
-Copy `.env.example` to `.env` and fill your own values later.
+Copy `.env.example` to `.env` and fill your own values.
 
-Current `.env.example` includes placeholders for:
+Key groups:
 - Digest settings
 - LLM provider settings (Zhipu/DeepSeek/Qwen)
-- GitHub token
-- SMTP email sending settings
+- Source/API tokens
+- SMTP email settings
 - Timezone and schedule settings
 
 ## Roadmap
-- Module 1: Source fetching + normalization
-- Module 2: Cleaning + rough deduplication
-- Module 3: LLM ranking/classification/summarization
-- Module 4: Markdown/HTML rendering
-- Module 5: Email delivery and scheduling
-- Module 6: Observability, tests, and hardening
+- Module 0: Project skeleton
+- Module 1: Config loading and data models
+- Module 2: Multi-source fetchers
+- Module 3: Cleaning, URL deduplication, and candidate trimming
+- Module 4: LLM analysis layer
+- Module 5: Markdown/HTML rendering
+- Module 6: Email delivery and scheduling
+- Module 7: Observability, tests, and hardening
 
 ---
-This repository currently provides only the Module 0 initialization skeleton.
+This repository is under active MVP development and does not claim full end-to-end completion yet.

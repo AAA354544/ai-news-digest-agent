@@ -14,6 +14,11 @@ from src.processors.deduplicator import (
     rank_candidates_lightweight,
     trim_candidates,
 )
+from src.processors.analyzer import analyze_candidates_with_llm, save_digest
+try:
+    from src.processors.llm_client import LLMClient
+except ModuleNotFoundError:
+    LLMClient = None  # type: ignore[assignment]
 
 __all__ = [
     "clean_candidates",
@@ -26,4 +31,9 @@ __all__ = [
     "prepare_llm_candidates",
     "rank_candidates_lightweight",
     "trim_candidates",
+    "analyze_candidates_with_llm",
+    "save_digest",
 ]
+
+if LLMClient is not None:
+    __all__.append("LLMClient")

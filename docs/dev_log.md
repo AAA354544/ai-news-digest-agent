@@ -84,3 +84,25 @@ Implement rule-based preprocessing on raw candidates: baseline text cleanup, har
 
 ### Current Status
 Pending verification
+
+## Module 4 - Zhipu LLM Analysis Layer
+
+### Module Goal
+Implement an OpenAI-compatible Zhipu LLM analysis layer that reads cleaned candidates, performs semantic deduplication/event merge/classification/selection/summarization in one structured step, and outputs validated `DailyDigest` JSON.
+
+### New/Updated Files
+- `src/processors/llm_client.py`
+- `src/processors/prompts.py`
+- `src/processors/analyzer.py`
+- `src/processors/__init__.py`
+- `tests/manual_test_llm.py`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+- `README.md`
+
+### Verification Method
+- Run: `python tests/manual_test_llm.py`
+- Verify latest cleaned file discovery, LLM call status, DailyDigest validation, digest JSON export under `data/digested/`, and top selected-item preview output.
+
+### Current Status
+Pending verification

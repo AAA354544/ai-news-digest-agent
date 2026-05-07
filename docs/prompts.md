@@ -17,3 +17,7 @@
 # Module 3 - Cleaning, URL Deduplication, and Candidate Trimming Prompt
 
 本次 prompt 目标：实现规则层清洗、URL 硬去重与候选裁剪流程，并提供模块 3 手动验收脚本，输出 cleaned candidates 供后续模块使用。
+
+# Module 4 - Zhipu LLM Analysis Layer Prompt
+
+本次 prompt 目标：实现智谱 OpenAI-compatible LLM 分析层，读取 cleaned candidates，完成语义去重与分类总结，并输出可校验的 `DailyDigest` JSON。
