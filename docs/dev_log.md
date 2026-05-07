@@ -20,3 +20,22 @@ Initialize an open-source-ready Python project skeleton for `ai-news-digest-agen
 - `streamlit run app.py` shows initialization page and demo button
 - No real fetching/LLM/email business logic implemented
 - Structure is clean and ready for next modules
+
+## Module 1 - Config Loading and Data Models
+
+### Module Goal
+Implement centralized configuration loading and core data models for the AI news digest project, without adding business logic such as fetching, LLM processing, digest generation, or email sending.
+
+### New/Updated Files
+- `src/config.py`
+- `src/models.py`
+- `tests/manual_test_config_models.py`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `python tests/manual_test_config_models.py`
+- Confirm config fields print correctly, source counts are loaded, and sample model objects can be created and printed.
+
+### Current Status
+Pending verification
