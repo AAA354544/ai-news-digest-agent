@@ -39,3 +39,28 @@ Implement centralized configuration loading and core data models for the AI news
 
 ### Current Status
 Pending verification
+
+## Module 2 - Multi-source Fetchers
+
+### Module Goal
+Implement lightweight multi-source fetchers that normalize public-source results into `CandidateNews`, without adding LLM, deduplication, reporting, email delivery, or full pipeline orchestration.
+
+### New/Updated Files
+- `src/fetchers/base.py`
+- `src/fetchers/rss_fetcher.py`
+- `src/fetchers/hn_fetcher.py`
+- `src/fetchers/arxiv_fetcher.py`
+- `src/fetchers/github_trending_fetcher.py`
+- `src/fetchers/web_extractor.py`
+- `src/fetchers/__init__.py`
+- `config/sources.yaml`
+- `tests/manual_test_fetchers.py`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `python tests/manual_test_fetchers.py`
+- Validate per-source fetch count logs, merged candidate total, top-5 preview output, and raw JSON output file under `data/raw/`.
+
+### Current Status
+Pending verification

@@ -1,40 +1,72 @@
 ﻿sources:
   - name: OpenAI Blog
     type: rss
-    url: "TODO"
-    note: "Placeholder; confirm official RSS/feed URL"
+    region: international
+    language: en
+    category: official_blog
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "Placeholder; confirm official RSS/feed URL"
 
   - name: Google DeepMind Blog
     type: rss
-    url: "TODO"
-    note: "Placeholder; confirm official RSS/feed URL"
+    region: international
+    language: en
+    category: official_blog
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "Placeholder; confirm official RSS/feed URL"
 
   - name: Hacker News AI Search
-    type: api_or_web
-    url: "TODO"
-    note: "Placeholder; decide API/search strategy"
+    type: hn_algolia
+    region: international
+    language: en
+    category: news_discussion
+    url_or_endpoint: "https://hn.algolia.com/api/v1/search_by_date"
+    enabled: true
+    notes: "Stable endpoint."
 
   - name: arXiv AI/CL
-    type: rss_or_api
-    url: "TODO"
-    note: "Placeholder; choose category feeds (e.g., cs.AI/cs.CL)"
+    type: arxiv
+    region: international
+    language: en
+    category: research
+    url_or_endpoint: "http://export.arxiv.org/api/query"
+    enabled: true
+    notes: "Stable endpoint."
 
   - name: GitHub Trending AI
-    type: web
-    url: "TODO"
-    note: "Placeholder; parse strategy TBD"
+    type: github_trending
+    region: international
+    language: en
+    category: open_source
+    url_or_endpoint: "https://github.com/trending"
+    enabled: true
+    notes: "Public trending page with lightweight parsing."
 
   - name: 量子位
     type: rss_or_web
-    url: "TODO"
-    note: "Placeholder; verify available feed"
+    region: chinese
+    language: zh
+    category: media
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "Placeholder; verify available feed"
 
   - name: 机器之心
     type: rss_or_web
-    url: "TODO"
-    note: "Placeholder; verify available feed"
+    region: chinese
+    language: zh
+    category: media
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "Placeholder; verify available feed"
 
   - name: 智谱 AI 官方
     type: rss_or_web
-    url: "TODO"
-    note: "Placeholder; verify official news/blog endpoint"
+    region: chinese
+    language: zh
+    category: official_blog
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "Placeholder; verify official news/blog endpoint"

@@ -9,3 +9,7 @@
 # Module 1 - Config Loading and Data Models Prompt
 
 本次 prompt 目标：实现配置加载（.env + sources.yaml）与核心数据模型（Pydantic），并提供可直接运行的手动测试脚本用于模块 1 验收。
+
+# Module 2 - Multi-source Fetchers Prompt
+
+本次 prompt 目标：实现多来源抓取器（RSS、Hacker News Algolia、arXiv、GitHub Trending）并统一输出 `CandidateNews`，同时提供模块 2 手动验收脚本。
