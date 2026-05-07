@@ -64,3 +64,23 @@ Implement lightweight multi-source fetchers that normalize public-source results
 
 ### Current Status
 Pending verification
+
+## Module 3 - Cleaning, URL Deduplication, and Candidate Trimming
+
+### Module Goal
+Implement rule-based preprocessing on raw candidates: baseline text cleanup, hard URL deduplication, lookback filtering, lightweight ranking, and candidate trimming for downstream LLM stages.
+
+### New/Updated Files
+- `src/processors/cleaner.py`
+- `src/processors/deduplicator.py`
+- `src/processors/__init__.py`
+- `tests/manual_test_cleaner.py`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `python tests/manual_test_cleaner.py`
+- Verify latest raw file discovery, stage-by-stage counts, cleaned JSON export under `data/cleaned/`, and top-5 preview output.
+
+### Current Status
+Pending verification

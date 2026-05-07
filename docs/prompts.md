@@ -13,3 +13,7 @@
 # Module 2 - Multi-source Fetchers Prompt
 
 本次 prompt 目标：实现多来源抓取器（RSS、Hacker News Algolia、arXiv、GitHub Trending）并统一输出 `CandidateNews`，同时提供模块 2 手动验收脚本。
+
+# Module 3 - Cleaning, URL Deduplication, and Candidate Trimming Prompt
+
+本次 prompt 目标：实现规则层清洗、URL 硬去重与候选裁剪流程，并提供模块 3 手动验收脚本，输出 cleaned candidates 供后续模块使用。
