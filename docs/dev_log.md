@@ -106,3 +106,25 @@ Implement an OpenAI-compatible Zhipu LLM analysis layer that reads cleaned candi
 
 ### Current Status
 Pending verification
+
+## Module 5 - Markdown and HTML Report Generation
+
+### Module Goal
+Render `DailyDigest` JSON from `data/digested/` into reusable Markdown and HTML daily report files via Jinja2 templates for downstream delivery.
+
+### New/Updated Files
+- `templates/digest.md.jinja`
+- `templates/digest.html.jinja`
+- `src/generators/report_generator.py`
+- `src/generators/__init__.py`
+- `tests/manual_test_report.py`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+- `README.md`
+
+### Verification Method
+- Run: `python tests/manual_test_report.py`
+- Verify latest digest loading, Markdown/HTML rendering, file outputs under `outputs/markdown` and `outputs/html`, and Markdown preview output.
+
+### Current Status
+Pending verification

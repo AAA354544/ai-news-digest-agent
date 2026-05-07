@@ -21,3 +21,7 @@
 # Module 4 - Zhipu LLM Analysis Layer Prompt
 
 本次 prompt 目标：实现智谱 OpenAI-compatible LLM 分析层，读取 cleaned candidates，完成语义去重与分类总结，并输出可校验的 `DailyDigest` JSON。
+
+# Module 5 - Markdown and HTML Report Generation Prompt
+
+本次 prompt 目标：基于模块 4 的 `DailyDigest` JSON，使用 Jinja2 渲染并输出 Markdown 与 HTML 日报文件，供后续邮件发送模块复用。

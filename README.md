@@ -89,7 +89,7 @@ Key groups:
 - Module 2: Multi-source fetchers
 - Module 3: Cleaning, URL deduplication, and candidate trimming
 - Module 4: LLM analysis layer
-- Module 5: Markdown/HTML rendering
+- Module 5: Markdown and HTML report generation
 - Module 6: Email delivery and scheduling
 - Module 7: Observability, tests, and hardening
 
