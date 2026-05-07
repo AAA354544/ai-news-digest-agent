@@ -1,0 +1,12 @@
+﻿streamlit
+python-dotenv
+pydantic
+pyyaml
+requests
+feedparser
+beautifulsoup4
+trafilatura
+jinja2
+openai
+typer
+rich

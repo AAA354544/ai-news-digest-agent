@@ -1,0 +1,40 @@
+﻿sources:
+  - name: OpenAI Blog
+    type: rss
+    url: "TODO"
+    note: "Placeholder; confirm official RSS/feed URL"
+
+  - name: Google DeepMind Blog
+    type: rss
+    url: "TODO"
+    note: "Placeholder; confirm official RSS/feed URL"
+
+  - name: Hacker News AI Search
+    type: api_or_web
+    url: "TODO"
+    note: "Placeholder; decide API/search strategy"
+
+  - name: arXiv AI/CL
+    type: rss_or_api
+    url: "TODO"
+    note: "Placeholder; choose category feeds (e.g., cs.AI/cs.CL)"
+
+  - name: GitHub Trending AI
+    type: web
+    url: "TODO"
+    note: "Placeholder; parse strategy TBD"
+
+  - name: 量子位
+    type: rss_or_web
+    url: "TODO"
+    note: "Placeholder; verify available feed"
+
+  - name: 机器之心
+    type: rss_or_web
+    url: "TODO"
+    note: "Placeholder; verify available feed"
+
+  - name: 智谱 AI 官方
+    type: rss_or_web
+    url: "TODO"
+    note: "Placeholder; verify official news/blog endpoint"
