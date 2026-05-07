@@ -1,59 +1,25 @@
 ﻿# ai-news-digest-agent
 
-A lightweight open-source MVP for building an AI News Daily Digest Agent.
+A modular open-source MVP for generating a daily AI news digest.
 
 ## Project Overview
-This project aims to build an agent that collects AI-related news from the past 24 hours, then uses LLM-based steps (deduplication, merging, classification, summarization) to generate a Chinese daily digest in Markdown + HTML and send it via email.
-
-## MVP Goal
-Complete a 3-4 day collaboration MVP with clear modular architecture and iterative delivery.
+The project collects AI-related updates from multiple public sources, performs rule-based preprocessing, uses LLM analysis for semantic consolidation, and generates Markdown + HTML reports. Optional SMTP sending delivers the digest by email.
 
 ## Current Status
-Current implementation is progressing in modules. Core scaffolding, config/models, fetchers, and rule-based preprocessing are in place. LLM analysis layer is introduced in Module 4.
+- Module 0-5: completed
+- Module 6-9: implemented, pending verification
 
-## Tech Stack (Planned)
-- Python
-- Streamlit (quick UI)
-- Typer + Rich (CLI)
-- Pydantic + dotenv + YAML config
-- Requests/feedparser/BeautifulSoup/trafilatura (data ingestion)
-- OpenAI-compatible API clients (provider-switchable)
-- Jinja2 (HTML generation)
-
-## Directory Structure
-```text
-.
-├── app.py
-├── cli.py
-├── README.md
-├── requirements.txt
-├── .env.example
-├── .gitignore
-├── config/
-│   └── sources.yaml
-├── docs/
-│   ├── dev_log.md
-│   └── prompts.md
-├── src/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── models.py
-│   ├── pipeline.py
-│   ├── fetchers/
-│   ├── processors/
-│   ├── generators/
-│   ├── notifiers/
-│   └── utils/
-├── templates/
-├── data/
-│   ├── raw/
-│   ├── cleaned/
-│   └── digested/
-├── outputs/
-│   ├── markdown/
-│   └── html/
-└── tests/
-```
+## Implemented Modules
+- Module 0: Project skeleton
+- Module 1: Config loading and data models
+- Module 2: Multi-source fetchers
+- Module 3: Cleaning, URL deduplication, and candidate trimming
+- Module 4: Zhipu LLM analysis layer
+- Module 5: Markdown and HTML report generation
+- Module 6: Email sending (HTML body + Markdown attachment)
+- Module 7: CLI pipeline orchestration
+- Module 8: Streamlit MVP UI
+- Module 9: GitHub Actions scheduled automation
 
 ## Local Run
 1. Install dependencies
@@ -61,37 +27,66 @@ Current implementation is progressing in modules. Core scaffolding, config/model
 pip install -r requirements.txt
 ```
 
-2. Run module tests in sequence
+2. Step-by-step manual tests
 ```bash
 python tests/manual_test_fetchers.py
 python tests/manual_test_cleaner.py
 python tests/manual_test_llm.py
+python tests/manual_test_report.py
+python tests/manual_test_email.py
 ```
 
-3. Run Streamlit demo page
+3. CLI usage
+```bash
+python cli.py --help
+python cli.py run-pipeline --llm-limit 5
+python cli.py run-pipeline --send-email --llm-limit 5
+```
+
+4. Streamlit UI
 ```bash
 streamlit run app.py
 ```
 
-## Environment Variables
-Copy `.env.example` to `.env` and fill your own values.
+## Email Configuration
+Set SMTP values in `.env` (do not commit `.env`):
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_SSL`
+- `SENDER_EMAIL`
+- `SMTP_AUTH_CODE`
+- `RECIPIENT_EMAIL`
 
-Key groups:
-- Digest settings
-- LLM provider settings (Zhipu/DeepSeek/Qwen)
-- Source/API tokens
-- SMTP email settings
-- Timezone and schedule settings
+Notes:
+- QQ/163 usually require SMTP authorization code, not account login password.
+- Recommended first run: send to your own mailbox.
+- Multiple recipients are supported using comma-separated emails in `RECIPIENT_EMAIL`.
 
-## Roadmap
-- Module 0: Project skeleton
-- Module 1: Config loading and data models
-- Module 2: Multi-source fetchers
-- Module 3: Cleaning, URL deduplication, and candidate trimming
-- Module 4: LLM analysis layer
-- Module 5: Markdown and HTML report generation
-- Module 6: Email delivery and scheduling
-- Module 7: Observability, tests, and hardening
+## GitHub Actions (Module 9)
+Workflow file: `.github/workflows/daily_digest.yml`
+
+- Trigger types:
+  - `schedule` at Beijing 22:00 (UTC 14:00, cron `0 14 * * *`)
+  - `workflow_dispatch` for manual trigger
+
+Configure repository secrets in: `Settings -> Secrets and variables -> Actions`.
+
+Required secrets:
+- `ZHIPU_API_KEY`
+- `ZHIPU_BASE_URL`
+- `ZHIPU_MODEL`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USE_SSL`
+- `SENDER_EMAIL`
+- `SMTP_AUTH_CODE`
+- `RECIPIENT_EMAIL`
+
+Optional secrets:
+- `DIGEST_TOPIC`
+- `MAX_LLM_CANDIDATES`
+
+## Repo Hygiene
+- Never commit `.env`
+- Never commit generated runtime outputs in `data/` and `outputs/`
 
 ---
-This repository is under active MVP development and does not claim full end-to-end completion yet.
+This repository is an MVP and is still under iterative verification.

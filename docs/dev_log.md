@@ -128,3 +128,81 @@ Render `DailyDigest` JSON from `data/digested/` into reusable Markdown and HTML 
 
 ### Current Status
 Pending verification
+
+## Module 6 - Email Sending
+
+### Module Goal
+Send digest email with HTML body and Markdown attachment via SMTP (QQ/163 compatible settings).
+
+### New/Updated Files
+- `src/notifiers/email_sender.py`
+- `src/notifiers/__init__.py`
+- `tests/manual_test_email.py`
+- `.env.example`
+- `README.md`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `python tests/manual_test_email.py`
+- Confirm latest HTML/Markdown report discovery, config printout, and successful SMTP delivery when credentials are valid.
+
+### Current Status
+Pending verification
+
+## Module 7 - CLI Pipeline
+
+### Module Goal
+Provide modular CLI orchestration for fetch, clean, analyze, report, email, and full pipeline runs.
+
+### New/Updated Files
+- `src/pipeline.py`
+- `cli.py`
+- `tests/manual_test_pipeline.py`
+- `README.md`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `python tests/manual_test_pipeline.py`
+- Run: `python cli.py --help`
+- Run: `python cli.py report`
+
+### Current Status
+Pending verification
+
+## Module 8 - Streamlit UI
+
+### Module Goal
+Upgrade Streamlit app from placeholder page to MVP control panel with pipeline actions and report preview.
+
+### New/Updated Files
+- `app.py`
+- `README.md`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Run: `streamlit run app.py`
+- Verify pipeline action buttons, latest report preview, and history list behavior.
+
+### Current Status
+Pending verification
+
+## Module 9 - GitHub Actions
+
+### Module Goal
+Add scheduled + manual GitHub Actions workflow to run digest pipeline and optional email sending.
+
+### New/Updated Files
+- `.github/workflows/daily_digest.yml`
+- `README.md`
+- `docs/dev_log.md`
+- `docs/prompts.md`
+
+### Verification Method
+- Inspect workflow config and triggers in `.github/workflows/daily_digest.yml`
+- Validate required secrets setup in repository settings.
+
+### Current Status
+Pending verification

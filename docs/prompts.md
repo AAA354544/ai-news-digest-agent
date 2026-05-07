@@ -25,3 +25,7 @@
 # Module 5 - Markdown and HTML Report Generation Prompt
 
 本次 prompt 目标：基于模块 4 的 `DailyDigest` JSON，使用 Jinja2 渲染并输出 Markdown 与 HTML 日报文件，供后续邮件发送模块复用。
+
+# Module 6-9 Final Integration Prompt
+
+本次 prompt 目标：补齐邮件发送、CLI pipeline、Streamlit MVP 页面和 GitHub Actions 定时运行，形成端到端闭环，并保持模块化、可复用、可手动验收。
