@@ -2,6 +2,7 @@
 
 import json
 import sys
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -18,29 +19,24 @@ from src.fetchers.rss_fetcher import RSSFetcher
 from src.fetchers.web_extractor import extract_text_from_url
 from src.models import CandidateNews
 from src.utils.http_utils import is_placeholder_url
+from src.utils.source_health import save_source_health
 
 
 def run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
     source_type = source.get('type', '').strip()
-    source_name = source.get('name', 'UNKNOWN')
 
-    try:
-        if source_type == 'rss':
-            return RSSFetcher(source).fetch()
-        if source_type == 'hn_algolia':
-            return HackerNewsFetcher(source).fetch()
-        if source_type == 'arxiv':
-            return ArxivFetcher(source).fetch()
-        if source_type == 'github_trending':
-            return GitHubTrendingFetcher(source).fetch()
-        if source_type == 'rss_or_web':
-            return RSSFetcher(source).fetch()
+    if source_type == 'rss':
+        return RSSFetcher(source).fetch()
+    if source_type == 'hn_algolia':
+        return HackerNewsFetcher(source).fetch()
+    if source_type == 'arxiv':
+        return ArxivFetcher(source).fetch()
+    if source_type == 'github_trending':
+        return GitHubTrendingFetcher(source).fetch()
+    if source_type == 'rss_or_web':
+        return RSSFetcher(source).fetch()
 
-        print(f"[manual_test_fetchers] Unsupported source type: {source_type} ({source_name})")
-        return []
-    except Exception as exc:
-        print(f"[manual_test_fetchers] Fetch failed for {source_name}: {exc}")
-        return []
+    return []
 
 
 def to_json_compatible(items: list[CandidateNews]) -> list[dict[str, Any]]:
@@ -58,32 +54,70 @@ def main() -> None:
     print(f'enabled sources: {len(enabled_sources)}')
 
     all_candidates: list[CandidateNews] = []
-    status = {
-        'skipped_placeholder': 0,
-        'failed_but_continued': 0,
-    }
+    health_records: list[dict[str, Any]] = []
 
     for source in enabled_sources:
         source_name = source.get('name', 'UNKNOWN')
-        endpoint = source.get('url_or_endpoint', '')
-        if is_placeholder_url(str(endpoint)):
-            status['skipped_placeholder'] += 1
+        source_type = source.get('type', '')
+        endpoint = str(source.get('url_or_endpoint', ''))
+
+        if is_placeholder_url(endpoint):
             print(f'source={source_name} count=0 status=skipped_placeholder')
+            health_records.append(
+                {
+                    'name': source_name,
+                    'type': source_type,
+                    'enabled': bool(source.get('enabled', True)),
+                    'status': 'skipped_placeholder',
+                    'count': 0,
+                    'note': 'placeholder endpoint',
+                }
+            )
             continue
 
+        status = 'empty'
+        note = ''
+        count = 0
         try:
             items = run_fetcher(source)
-            status_text = 'ok' if len(items) > 0 else 'empty_or_skipped'
-            print(f'source={source_name} count={len(items)} status={status_text}')
+            count = len(items)
             all_candidates.extend(items)
-        except Exception:
-            status['failed_but_continued'] += 1
-            print(f'source={source_name} count=0 status=failed_but_continued')
+            status = 'ok' if count > 0 else 'empty'
+        except TimeoutError:
+            status = 'timeout'
+            note = 'timeout'
+        except Exception as exc:
+            msg = str(exc).lower()
+            if '429' in msg or 'rate' in msg:
+                status = 'rate_limited'
+            elif '404' in msg:
+                status = 'http_404'
+            elif 'timeout' in msg:
+                status = 'timeout'
+            else:
+                status = 'failed_but_continued'
+            note = str(exc)
 
-    print(f"status summary: skipped placeholder={status['skipped_placeholder']}, failed but continued={status['failed_but_continued']}")
+        print(f'source={source_name} count={count} status={status}')
+        health_records.append(
+            {
+                'name': source_name,
+                'type': source_type,
+                'enabled': bool(source.get('enabled', True)),
+                'status': status,
+                'count': count,
+                'note': note,
+            }
+        )
+
     print(f'total candidates: {len(all_candidates)}')
 
     if all_candidates:
+        dist = Counter(item.source_type for item in all_candidates)
+        print('source_type distribution:')
+        for k in sorted(dist.keys()):
+            print(f'  {k}: {dist[k]}')
+
         print('top 5 candidates:')
         for idx, item in enumerate(all_candidates[:5], start=1):
             print(f'{idx}. {item.title} | {item.source_name} | {item.url}')
@@ -99,11 +133,13 @@ def main() -> None:
     out_dir = PROJECT_ROOT / 'data' / 'raw'
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{date.today().isoformat()}_raw_candidates.json"
-
     with out_path.open('w', encoding='utf-8') as f:
         json.dump(to_json_compatible(all_candidates), f, ensure_ascii=False, indent=2)
 
+    health_path = save_source_health(health_records, output_dir=str(out_dir))
+
     print(f'saved raw candidates: {out_path}')
+    print(f'saved source health: {health_path}')
     print('Module 2 fetchers test completed.')
 
 

@@ -15,8 +15,9 @@
     language: en
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: confirm stable public RSS feed."
+    notes: "TODO: verify stable feed endpoint."
 
   - name: Anthropic News
     type: rss_or_web
@@ -24,8 +25,9 @@
     language: en
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: confirm stable public RSS feed."
+    notes: "TODO: verify stable feed endpoint."
 
   - name: Microsoft AI Blog
     type: rss
@@ -43,8 +45,9 @@
     language: en
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify stable RSS endpoint."
+    notes: "TODO: verify stable feed endpoint."
 
   - name: NVIDIA Blog
     type: rss
@@ -64,7 +67,47 @@
     url_or_endpoint: "https://huggingface.co/blog/feed.xml"
     max_items: 20
     enabled: true
-    notes: "Public RSS feed; timeout will be skipped gracefully."
+    notes: "Public RSS feed; timeout tolerated."
+
+  - name: Google AI Blog
+    type: rss_or_web
+    region: international
+    language: en
+    category: official_blog
+    url_or_endpoint: "TODO"
+    max_items: 20
+    enabled: false
+    notes: "TODO: verify stable feed endpoint."
+
+  - name: Simon Willison Blog
+    type: rss
+    region: international
+    language: en
+    category: developer_tools
+    url_or_endpoint: "https://simonwillison.net/atom/everything/"
+    max_items: 20
+    enabled: true
+    notes: "Public Atom feed; useful for AI developer tooling trends."
+
+  - name: Latent Space
+    type: rss_or_web
+    region: international
+    language: en
+    category: developer_tools
+    url_or_endpoint: "TODO"
+    max_items: 20
+    enabled: false
+    notes: "TODO: verify stable feed endpoint."
+
+  - name: Papers with Code Trending
+    type: rss_or_web
+    region: international
+    language: en
+    category: research
+    url_or_endpoint: "TODO"
+    max_items: 20
+    enabled: false
+    notes: "TODO: verify stable public feed endpoint."
 
   - name: Hacker News AI Search
     type: hn_algolia
@@ -84,7 +127,7 @@
     url_or_endpoint: "http://export.arxiv.org/api/query"
     max_items: 20
     enabled: true
-    notes: "Stable API endpoint with polite query pacing."
+    notes: "Stable API endpoint with polite pacing."
 
   - name: GitHub Trending AI
     type: github_trending
@@ -94,7 +137,7 @@
     url_or_endpoint: "https://github.com/trending"
     max_items: 10
     enabled: true
-    notes: "Public trending page with lightweight parsing."
+    notes: "Public trending page."
 
   - name: TechCrunch AI
     type: rss
@@ -122,8 +165,9 @@
     language: en
     category: ai_media
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: confirm stable RSS endpoint."
+    notes: "TODO: verify stable feed endpoint."
 
   - name: MIT Technology Review AI
     type: rss
@@ -141,8 +185,9 @@
     language: zh
     category: ai_media
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify public feed or compliant web endpoint."
+    notes: "TODO: verify public feed or compliant endpoint."
 
   - name: 机器之心
     type: rss_or_web
@@ -150,8 +195,9 @@
     language: zh
     category: ai_media
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify public feed or compliant web endpoint."
+    notes: "TODO: verify public feed or compliant endpoint."
 
   - name: 智谱 AI 官方
     type: rss_or_web
@@ -159,8 +205,9 @@
     language: zh
     category: official_blog
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify official news/blog endpoint."
+    notes: "TODO: verify official public endpoint."
 
   - name: DeepSeek 官方
     type: rss_or_web
@@ -168,17 +215,9 @@
     language: zh
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify official public news endpoint."
-
-  - name: 月之暗面官方
-    type: rss_or_web
-    region: chinese
-    language: zh
-    category: ai_company
-    url_or_endpoint: "TODO"
-    enabled: false
-    notes: "TODO: verify official public news endpoint."
+    notes: "TODO: verify official public endpoint."
 
   - name: 通义千问官方
     type: rss_or_web
@@ -186,8 +225,9 @@
     language: zh
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify official public news endpoint."
+    notes: "TODO: verify official public endpoint."
 
   - name: 百度智能云 AI 官方
     type: rss_or_web
@@ -195,5 +235,6 @@
     language: zh
     category: ai_company
     url_or_endpoint: "TODO"
+    max_items: 20
     enabled: false
-    notes: "TODO: verify official public news endpoint."
+    notes: "TODO: verify official public endpoint."

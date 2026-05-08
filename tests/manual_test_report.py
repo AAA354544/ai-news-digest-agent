@@ -40,7 +40,12 @@ def main() -> None:
     print(f"markdown path: {md_path}")
     print(f"html path: {html_path}")
     print("markdown preview (first 500 chars):")
-    print(markdown_text[:500])
+    preview = markdown_text[:500].lstrip("\ufeff")
+    try:
+        print(preview)
+    except UnicodeEncodeError:
+        safe = preview.encode("gbk", errors="ignore").decode("gbk", errors="ignore")
+        print(safe)
     print("Module 5 report generation test completed.")
 
 

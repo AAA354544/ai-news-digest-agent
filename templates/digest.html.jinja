@@ -3,98 +3,105 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Research & Industry Digest - {{ digest.date }}</title>
+  <title>AI Research &amp; Industry Digest - {{ digest.date }}</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f6f7fb; color: #1f2937; }
-    .container { max-width: 920px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 22px; }
-    h1 { margin-top: 0; font-size: 28px; }
-    h2 { margin-top: 28px; font-size: 21px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-    h3 { margin: 0 0 8px 0; font-size: 17px; }
-    .meta { color: #4b5563; font-size: 14px; margin-bottom: 14px; }
-    .summary-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 14px; }
-    .news-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    body { margin: 0; padding: 16px; background: #f5f7fb; color: #1f2937; font-family: Arial, sans-serif; }
+    .container { max-width: 920px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+    .hero { background: #111827; color: #f9fafb; padding: 18px 20px; }
+    .hero h1 { margin: 0 0 8px 0; font-size: 24px; }
+    .hero .meta { font-size: 14px; color: #d1d5db; }
+    .hero .stats { margin-top: 10px; font-size: 13px; color: #e5e7eb; }
+    .section { padding: 18px 20px; }
+    .section h2 { margin: 0 0 14px 0; font-size: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff; }
+    .title { font-size: 17px; margin: 0 0 8px 0; }
     .line { margin: 6px 0; font-size: 14px; }
-    .tags { margin-top: 8px; }
-    .tag { display: inline-block; background: #ecfeff; color: #155e75; border-radius: 12px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; font-size: 12px; }
-    .appendix-item { border-left: 3px solid #d1d5db; padding-left: 10px; margin-bottom: 12px; }
+    .tags { margin: 6px 0; }
+    .tag { display: inline-block; font-size: 12px; background: #ecfeff; color: #0e7490; border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; }
+    ul { margin: 6px 0 0 20px; padding: 0; }
     a { color: #2563eb; text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .footer { margin-top: 28px; font-size: 12px; color: #6b7280; }
-    ul { margin: 6px 0 0 20px; padding: 0; }
+    .appendix-item { border-left: 3px solid #d1d5db; padding-left: 10px; margin-bottom: 10px; }
+    .stats-footer { background: #f3f4f6; border-top: 1px solid #e5e7eb; padding: 14px 20px; font-size: 13px; color: #374151; }
+    .footer { padding: 12px 20px; color: #6b7280; font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>AI Research & Industry Digest</h1>
-    <div class="meta">Topic: {{ digest.topic }} | Date: {{ digest.date }}</div>
-
-    <div class="summary-card">
-      <div>Selected News: <strong>{{ selected_count }}</strong></div>
-      <div>Appendix: <strong>{{ digest.appendix | length }}</strong></div>
-      <div>Candidate Source Distribution: total={{ digest.source_statistics.total_candidates }}, cleaned={{ digest.source_statistics.cleaned_candidates }}, selected={{ digest.source_statistics.selected_items }}, sources={{ digest.source_statistics.source_count }}</div>
+    <div class="hero">
+      <h1>AI Research &amp; Industry Digest - {{ digest.date }}</h1>
+      <div class="meta">Topic: {{ digest.topic }} | Date: {{ digest.date }}</div>
+      <div class="stats">
+        Selected News Count: {{ selected_count }} | Appendix Count: {{ digest.appendix | length }}
+      </div>
     </div>
 
-    {% for group in digest.main_digest %}
-    {% if group.items %}
-    <h2>{{ group.category_name }}</h2>
-      {% for item in group.items %}
-      <div class="news-card">
-        <h3>{{ item.title }}</h3>
-        <div class="line"><strong>Links:</strong></div>
-        <ul>
-          {% if item.links %}
-            {% for link in item.links %}
-            <li><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link }}</a></li>
-            {% endfor %}
-          {% else %}
-            <li>No link available</li>
-          {% endif %}
-        </ul>
-        <div class="tags">
-          {% if item.tags %}
-            {% for tag in item.tags %}
-            <span class="tag">{{ tag }}</span>
-            {% endfor %}
-          {% else %}
-            <span class="tag">N/A</span>
-          {% endif %}
-        </div>
-        <div class="line"><strong>Summary:</strong> {{ item.summary if item.summary else 'N/A' }}</div>
-        <div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters if item.why_it_matters else 'N/A' }}</div>
-        <div class="line"><strong>Trend Insight:</strong> {{ item.insights if item.insights else 'N/A' }}</div>
-        <div class="line"><strong>Sources:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
-      </div>
-      {% endfor %}
-    {% endif %}
-    {% endfor %}
+    <div class="section">
+      {% for group in digest.main_digest %}
+      {% if group.items %}
+      <h2>{{ group.category_name }}</h2>
+        {% for item in group.items %}
+        <div class="card">
+          <h3 class="title">{{ item.title }}</h3>
 
-    <h2>Appendix</h2>
-    {% if digest.appendix %}
-      {% for item in digest.appendix %}
-      <div class="appendix-item">
-        <div><strong>{{ item.title }}</strong></div>
-        <div>
-          {% if item.link %}
-          <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.link }}</a>
-          {% else %}
-          No link available
-          {% endif %}
-        </div>
-        <div>Source: {{ item.source if item.source else 'N/A' }}</div>
-        <div>{{ item.brief_summary if item.brief_summary else 'N/A' }}</div>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="line">No appendix items.</div>
-    {% endif %}
+          <div class="tags">
+            {% if item.tags %}
+              {% for tag in item.tags %}
+              <span class="tag">{{ tag }}</span>
+              {% endfor %}
+            {% endif %}
+          </div>
 
-    <h2>Source Statistics</h2>
-    <div class="line">total_candidates: {{ digest.source_statistics.total_candidates }}</div>
-    <div class="line">cleaned_candidates: {{ digest.source_statistics.cleaned_candidates }}</div>
-    <div class="line">selected_items: {{ digest.source_statistics.selected_items }}</div>
-    <div class="line">source_count: {{ digest.source_statistics.source_count }}</div>
-    <div class="line">international_count: {{ digest.source_statistics.international_count if digest.source_statistics.international_count is not none else 'N/A' }}</div>
-    <div class="line">chinese_count: {{ digest.source_statistics.chinese_count if digest.source_statistics.chinese_count is not none else 'N/A' }}</div>
+          {% if item.summary %}<div class="line"><strong>Summary:</strong> {{ item.summary }}</div>{% else %}<div class="line"><strong>Summary:</strong> N/A</div>{% endif %}
+          {% if item.why_it_matters %}<div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters }}</div>{% else %}<div class="line"><strong>Why It Matters:</strong> N/A</div>{% endif %}
+          {% if item.insights %}<div class="line"><strong>Trend Insight:</strong> {{ item.insights }}</div>{% else %}<div class="line"><strong>Trend Insight:</strong> N/A</div>{% endif %}
+          <div class="line"><strong>Source:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
+
+          <div class="line"><strong>Links:</strong></div>
+          <ul>
+            {% if item.links %}
+              {% for link in item.links %}
+              <li><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link }}</a></li>
+              {% endfor %}
+            {% else %}
+              <li>No link available</li>
+            {% endif %}
+          </ul>
+        </div>
+        {% endfor %}
+      {% endif %}
+      {% endfor %}
+
+      <h2>Appendix</h2>
+      {% if digest.appendix %}
+        {% for item in digest.appendix %}
+        <div class="appendix-item">
+          <div><strong>{{ item.title }}</strong></div>
+          <div>
+            {% if item.link %}
+            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.link }}</a>
+            {% else %}
+            No link available
+            {% endif %}
+          </div>
+          <div>Source: {{ item.source if item.source else 'N/A' }}</div>
+          <div>{{ item.brief_summary if item.brief_summary else 'N/A' }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="line">No appendix items.</div>
+      {% endif %}
+    </div>
+
+    <div class="stats-footer">
+      <div><strong>Source Statistics</strong></div>
+      <div>total_candidates: {{ digest.source_statistics.total_candidates }}</div>
+      <div>cleaned_candidates: {{ digest.source_statistics.cleaned_candidates }}</div>
+      <div>selected_items: {{ digest.source_statistics.selected_items }}</div>
+      <div>source_count: {{ digest.source_statistics.source_count }}</div>
+      <div>international_count: {{ digest.source_statistics.international_count if digest.source_statistics.international_count is not none else 'N/A' }}</div>
+      <div>chinese_count: {{ digest.source_statistics.chinese_count if digest.source_statistics.chinese_count is not none else 'N/A' }}</div>
+    </div>
 
     <div class="footer">Generated by ai-news-digest-agent</div>
   </div>

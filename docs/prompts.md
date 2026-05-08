@@ -33,3 +33,7 @@
 # Optimization Round 1 - Research and Industry Digest Balance Prompt
 
 本轮优化目标：在保持模块化与合规抓取前提下，提升日报质量与来源平衡，避免论文列表化，强化“科研进展 + 产业风向”表达，并补充策略配置、模板表达和开源文档展示。
+
+# Optimization Round 2 - UI, Email, Sources, and Source Health Prompt
+
+本次 prompt 目标：优化项目展示与内容源质量，包括 README/Mermaid 修正、Streamlit 展示增强、HTML 邮件模板优化、来源扩展与 source health 汇总，以及更平衡的 LLM 来源策略。

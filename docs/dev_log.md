@@ -232,3 +232,26 @@ Improve digest quality and source balance toward "AI research progress + AI indu
 
 ### Status
 Pending verification
+
+## Optimization Round 2 - UI, Email, Sources, and Source Health
+
+### Goal
+Polish project presentation and improve source diversity/operability without changing core architecture.
+
+### Changes
+- README and Mermaid architecture section improved for open-source showcase.
+- Streamlit UI upgraded with tabs, metrics, history preview, and Markdown/HTML download buttons.
+- HTML email template refined with digest hero, cleaner cards, and appendix readability.
+- High-quality source list expanded with additional company/tooling/media candidates.
+- Source health summary added and persisted for fetch visibility.
+- LLM prompt refined for richer source mix and reduced single-source dominance.
+
+### Verification
+- README/Mermaid static rendering check on GitHub
+- `streamlit run app.py`
+- `python tests/manual_test_report.py`
+- `python tests/manual_test_fetchers.py`
+- `set LLM_TEST_CANDIDATE_LIMIT=10 && python tests/manual_test_llm.py`
+
+### Status
+Pending verification
