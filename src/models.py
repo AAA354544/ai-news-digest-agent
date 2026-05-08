@@ -13,6 +13,7 @@ class SourceConfig(BaseModel):
     language: str = 'en'
     category: str = 'ai'
     url_or_endpoint: str = ''
+    max_items: Optional[int] = None
     enabled: bool = True
     notes: Optional[str] = None
 

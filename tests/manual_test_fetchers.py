@@ -17,23 +17,23 @@ from src.fetchers.hn_fetcher import HackerNewsFetcher
 from src.fetchers.rss_fetcher import RSSFetcher
 from src.fetchers.web_extractor import extract_text_from_url
 from src.models import CandidateNews
+from src.utils.http_utils import is_placeholder_url
 
 
 def run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
-    source_type = source.get("type", "").strip()
-    source_name = source.get("name", "UNKNOWN")
+    source_type = source.get('type', '').strip()
+    source_name = source.get('name', 'UNKNOWN')
 
     try:
-        if source_type == "rss":
+        if source_type == 'rss':
             return RSSFetcher(source).fetch()
-        if source_type == "hn_algolia":
+        if source_type == 'hn_algolia':
             return HackerNewsFetcher(source).fetch()
-        if source_type == "arxiv":
+        if source_type == 'arxiv':
             return ArxivFetcher(source).fetch()
-        if source_type == "github_trending":
+        if source_type == 'github_trending':
             return GitHubTrendingFetcher(source).fetch()
-        if source_type == "rss_or_web":
-            # Module 2 fallback: try RSS parser path only.
+        if source_type == 'rss_or_web':
             return RSSFetcher(source).fetch()
 
         print(f"[manual_test_fetchers] Unsupported source type: {source_type} ({source_name})")
@@ -46,8 +46,8 @@ def run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
 def to_json_compatible(items: list[CandidateNews]) -> list[dict[str, Any]]:
     data: list[dict[str, Any]] = []
     for item in items:
-        if hasattr(item, "model_dump"):
-            data.append(item.model_dump(mode="json"))
+        if hasattr(item, 'model_dump'):
+            data.append(item.model_dump(mode='json'))
         else:
             data.append(item.dict())
     return data
@@ -55,41 +55,57 @@ def to_json_compatible(items: list[CandidateNews]) -> list[dict[str, Any]]:
 
 def main() -> None:
     enabled_sources = get_enabled_sources()
-    print(f"enabled sources: {len(enabled_sources)}")
+    print(f'enabled sources: {len(enabled_sources)}')
 
     all_candidates: list[CandidateNews] = []
-    for source in enabled_sources:
-        source_name = source.get("name", "UNKNOWN")
-        items = run_fetcher(source)
-        print(f"source={source_name} count={len(items)}")
-        all_candidates.extend(items)
+    status = {
+        'skipped_placeholder': 0,
+        'failed_but_continued': 0,
+    }
 
-    print(f"total candidates: {len(all_candidates)}")
+    for source in enabled_sources:
+        source_name = source.get('name', 'UNKNOWN')
+        endpoint = source.get('url_or_endpoint', '')
+        if is_placeholder_url(str(endpoint)):
+            status['skipped_placeholder'] += 1
+            print(f'source={source_name} count=0 status=skipped_placeholder')
+            continue
+
+        try:
+            items = run_fetcher(source)
+            status_text = 'ok' if len(items) > 0 else 'empty_or_skipped'
+            print(f'source={source_name} count={len(items)} status={status_text}')
+            all_candidates.extend(items)
+        except Exception:
+            status['failed_but_continued'] += 1
+            print(f'source={source_name} count=0 status=failed_but_continued')
+
+    print(f"status summary: skipped placeholder={status['skipped_placeholder']}, failed but continued={status['failed_but_continued']}")
+    print(f'total candidates: {len(all_candidates)}')
 
     if all_candidates:
-        print("top 5 candidates:")
+        print('top 5 candidates:')
         for idx, item in enumerate(all_candidates[:5], start=1):
-            print(f"{idx}. {item.title} | {item.source_name} | {item.url}")
+            print(f'{idx}. {item.title} | {item.source_name} | {item.url}')
 
-        # Demo-only extraction for 1 URL (optional, non-blocking).
         demo_url = all_candidates[0].url
         extracted = extract_text_from_url(demo_url)
-        preview = (extracted[:180] + "...") if extracted and len(extracted) > 180 else extracted
-        print(f"demo extract url: {demo_url}")
+        preview = (extracted[:180] + '...') if extracted and len(extracted) > 180 else extracted
+        print(f'demo extract url: {demo_url}')
         print(f"demo extract preview: {preview if preview else 'None'}")
     else:
-        print("No candidates fetched. This is acceptable in manual test if network/source availability is limited.")
+        print('No candidates fetched. This is acceptable in manual test if network/source availability is limited.')
 
-    out_dir = PROJECT_ROOT / "data" / "raw"
+    out_dir = PROJECT_ROOT / 'data' / 'raw'
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{date.today().isoformat()}_raw_candidates.json"
 
-    with out_path.open("w", encoding="utf-8") as f:
+    with out_path.open('w', encoding='utf-8') as f:
         json.dump(to_json_compatible(all_candidates), f, ensure_ascii=False, indent=2)
 
-    print(f"saved raw candidates: {out_path}")
-    print("Module 2 fetchers test completed.")
+    print(f'saved raw candidates: {out_path}')
+    print('Module 2 fetchers test completed.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

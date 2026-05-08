@@ -1,92 +1,104 @@
 ﻿# ai-news-digest-agent
 
-A modular open-source MVP for generating a daily AI news digest.
-
-## Project Overview
-The project collects AI-related updates from multiple public sources, performs rule-based preprocessing, uses LLM analysis for semantic consolidation, and generates Markdown + HTML reports. Optional SMTP sending delivers the digest by email.
+A modular AI News Digest Agent that aggregates public AI news, papers, open-source signals, and industry updates, then uses an LLM to produce a structured Chinese daily digest with Markdown/HTML outputs, SMTP email delivery, CLI orchestration, Streamlit UI, and GitHub Actions scheduling.
 
 ## Current Status
-- Module 0-5: completed
-- Module 6-9: implemented, pending verification
+Module 0-9 completed and verified locally.
 
-## Implemented Modules
-- Module 0: Project skeleton
-- Module 1: Config loading and data models
-- Module 2: Multi-source fetchers
-- Module 3: Cleaning, URL deduplication, and candidate trimming
-- Module 4: Zhipu LLM analysis layer
-- Module 5: Markdown and HTML report generation
-- Module 6: Email sending (HTML body + Markdown attachment)
-- Module 7: CLI pipeline orchestration
-- Module 8: Streamlit MVP UI
-- Module 9: GitHub Actions scheduled automation
+## Content Strategy
+This project is positioned as an **AI research + industry trend digest**:
+- AI research progress and paper frontier
+- AI model and technology updates
+- Agent and AI tool trends
+- company/product and commercialization signals
+- open-source and developer ecosystem
+- compute/chips/infrastructure signals
+- safety/policy/regulation updates
 
-## Local Run
-1. Install dependencies
-```bash
-pip install -r requirements.txt
+arXiv is kept as a key source, while candidate balancing controls paper-heavy output by default.
+
+## Architecture
+```mermaid
+flowchart LR
+    A[sources.yaml] --> B[fetchers]
+    B --> C[raw candidates]
+    C --> D[cleaner / dedup / balancer]
+    D --> E[LLM analyzer]
+    E --> F[DailyDigest JSON]
+    F --> G[Jinja2 Markdown / HTML]
+    G --> H[SMTP Email]
+    G --> I[Streamlit Preview]
+    G --> J[GitHub Actions]
 ```
 
-2. Step-by-step manual tests
+## Configuration
+- `.env`: runtime secrets and switches (do not commit)
+- `config/sources.yaml`: source list and enable flags
+- `config/digest_policy.yaml`: source quotas + digest category strategy
+
+## Data Sources
+Enabled sources include stable public endpoints such as:
+- HN Algolia API
+- arXiv API
+- GitHub Trending page
+- selected public RSS feeds (e.g. OpenAI/Microsoft/NVIDIA/Hugging Face/TechCrunch)
+
+Some sources remain TODO/disabled until stable public RSS or compliant endpoint is confirmed.
+
+The project only fetches public content and does **not** bypass login/paywall/captcha.
+
+## Manual Verification
+No-API checks:
+```bash
+python tests/manual_test_digest_policy.py
+python tests/manual_test_balancer.py
+python tests/manual_test_config_models.py
+```
+
+Fetching / preprocessing:
 ```bash
 python tests/manual_test_fetchers.py
 python tests/manual_test_cleaner.py
+```
+
+LLM / report / pipeline:
+```bash
+set LLM_TEST_CANDIDATE_LIMIT=10
 python tests/manual_test_llm.py
 python tests/manual_test_report.py
+python tests/manual_test_pipeline.py
+```
+
+Email / UI / CLI:
+```bash
 python tests/manual_test_email.py
-```
-
-3. CLI usage
-```bash
 python cli.py --help
-python cli.py run-pipeline --llm-limit 5
-python cli.py run-pipeline --send-email --llm-limit 5
-```
-
-4. Streamlit UI
-```bash
 streamlit run app.py
 ```
 
-## Email Configuration
-Set SMTP values in `.env` (do not commit `.env`):
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_SSL`
-- `SENDER_EMAIL`
-- `SMTP_AUTH_CODE`
-- `RECIPIENT_EMAIL`
+## GitHub Actions
+Workflow: `.github/workflows/daily_digest.yml`
+- schedule: UTC 14:00 (Beijing 22:00)
+- workflow_dispatch: manual trigger
 
-Notes:
-- QQ/163 usually require SMTP authorization code, not account login password.
-- Recommended first run: send to your own mailbox.
-- Multiple recipients are supported using comma-separated emails in `RECIPIENT_EMAIL`.
+Requires secrets for LLM + SMTP before production use.
 
-## GitHub Actions (Module 9)
-Workflow file: `.github/workflows/daily_digest.yml`
+## Limitations
+- free/flash LLM models can hit timeout or 429
+- some RSS sources are still TODO and disabled
+- no database persistence in current version
+- no historical trend RAG yet
+- no bypass of login/paywall/captcha
+- GitHub Actions requires repository secrets setup
 
-- Trigger types:
-  - `schedule` at Beijing 22:00 (UTC 14:00, cron `0 14 * * *`)
-  - `workflow_dispatch` for manual trigger
-
-Configure repository secrets in: `Settings -> Secrets and variables -> Actions`.
-
-Required secrets:
-- `ZHIPU_API_KEY`
-- `ZHIPU_BASE_URL`
-- `ZHIPU_MODEL`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USE_SSL`
-- `SENDER_EMAIL`
-- `SMTP_AUTH_CODE`
-- `RECIPIENT_EMAIL`
-
-Optional secrets:
-- `DIGEST_TOPIC`
-- `MAX_LLM_CANDIDATES`
+## Roadmap
+- source quality improvement and source health checks
+- stronger category balancing and policy tuning
+- trend-oriented prompt tuning iteration
+- report screenshots for README showcase
+- lightweight unit tests for core processors
+- optional multi-model support (DeepSeek/Qwen)
 
 ## Repo Hygiene
-- Never commit `.env`
-- Never commit generated runtime outputs in `data/` and `outputs/`
-
----
-This repository is an MVP and is still under iterative verification.
+- never commit `.env`
+- never commit runtime outputs under `data/` and `outputs/`

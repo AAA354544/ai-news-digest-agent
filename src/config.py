@@ -10,8 +10,33 @@ from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load local .env only for configuration reading.
 load_dotenv(BASE_DIR / '.env')
+
+DEFAULT_DIGEST_POLICY: dict[str, Any] = {
+    'candidate_quotas': {
+        'arxiv': 20,
+        'hn_algolia': 18,
+        'github_trending': 8,
+        'rss': 12,
+        'rss_or_web': 12,
+        'official_blog': 12,
+        'ai_media': 12,
+    },
+    'main_digest_policy': {
+        'max_research_ratio': 0.4,
+        'positioning': 'AI research progress plus AI industry and technology trend digest',
+        'preferred_categories': [
+            '技术与模型进展',
+            '科研与论文前沿',
+            'Agent 与 AI 工具',
+            '产业与公司动态',
+            '开源生态与开发者趋势',
+            '算力、芯片与基础设施',
+            '安全、政策与监管',
+            '其他',
+        ],
+    },
+}
 
 
 class AppConfig(BaseModel):
@@ -40,7 +65,6 @@ class AppConfig(BaseModel):
 
 
 def load_app_config() -> AppConfig:
-    """Read runtime settings from environment variables (.env supported)."""
     return AppConfig(
         digest_topic=os.getenv('DIGEST_TOPIC', 'AI'),
         digest_lookback_hours=int(os.getenv('DIGEST_LOOKBACK_HOURS', '24')),
@@ -64,7 +88,6 @@ def load_app_config() -> AppConfig:
 
 
 def load_sources_config(path: str = 'config/sources.yaml') -> dict[str, Any] | list[dict[str, Any]]:
-    """Load source definitions from YAML file."""
     config_path = Path(path)
     if not config_path.is_absolute():
         config_path = BASE_DIR / config_path
@@ -82,8 +105,34 @@ def load_sources_config(path: str = 'config/sources.yaml') -> dict[str, Any] | l
     return {'sources': []}
 
 
+def load_digest_policy(path: str = 'config/digest_policy.yaml') -> dict[str, Any]:
+    policy_path = Path(path)
+    if not policy_path.is_absolute():
+        policy_path = BASE_DIR / policy_path
+
+    if not policy_path.exists():
+        return DEFAULT_DIGEST_POLICY.copy()
+
+    try:
+        with policy_path.open('r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+        if not isinstance(data, dict):
+            return DEFAULT_DIGEST_POLICY.copy()
+
+        merged = DEFAULT_DIGEST_POLICY.copy()
+        for key, value in data.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                tmp = dict(merged[key])
+                tmp.update(value)
+                merged[key] = tmp
+            else:
+                merged[key] = value
+        return merged
+    except Exception:
+        return DEFAULT_DIGEST_POLICY.copy()
+
+
 def get_enabled_sources(path: str = 'config/sources.yaml') -> list[dict[str, Any]]:
-    """Return sources with enabled=true. Missing enabled defaults to true."""
     data = load_sources_config(path)
 
     if isinstance(data, list):

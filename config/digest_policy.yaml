@@ -1,0 +1,21 @@
+﻿candidate_quotas:
+  arxiv: 20
+  hn_algolia: 18
+  github_trending: 8
+  rss: 12
+  rss_or_web: 12
+  official_blog: 12
+  ai_media: 12
+
+main_digest_policy:
+  max_research_ratio: 0.4
+  positioning: "AI research progress plus AI industry and technology trend digest"
+  preferred_categories:
+    - 技术与模型进展
+    - 科研与论文前沿
+    - Agent 与 AI 工具
+    - 产业与公司动态
+    - 开源生态与开发者趋势
+    - 算力、芯片与基础设施
+    - 安全、政策与监管
+    - 其他

@@ -1,30 +1,80 @@
 ﻿sources:
-  - name: OpenAI Blog
+  - name: OpenAI News
     type: rss
     region: international
     language: en
     category: official_blog
-    url_or_endpoint: "TODO"
-    enabled: false
-    notes: "Placeholder; confirm official RSS/feed URL"
+    url_or_endpoint: "https://openai.com/news/rss.xml"
+    max_items: 30
+    enabled: true
+    notes: "Public RSS feed."
 
   - name: Google DeepMind Blog
+    type: rss_or_web
+    region: international
+    language: en
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: confirm stable public RSS feed."
+
+  - name: Anthropic News
+    type: rss_or_web
+    region: international
+    language: en
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: confirm stable public RSS feed."
+
+  - name: Microsoft AI Blog
     type: rss
     region: international
     language: en
-    category: official_blog
+    category: ai_company
+    url_or_endpoint: "https://blogs.microsoft.com/ai/feed/"
+    max_items: 20
+    enabled: true
+    notes: "Public RSS feed."
+
+  - name: Meta AI Blog
+    type: rss_or_web
+    region: international
+    language: en
+    category: ai_company
     url_or_endpoint: "TODO"
     enabled: false
-    notes: "Placeholder; confirm official RSS/feed URL"
+    notes: "TODO: verify stable RSS endpoint."
+
+  - name: NVIDIA Blog
+    type: rss
+    region: international
+    language: en
+    category: infra_chip
+    url_or_endpoint: "https://blogs.nvidia.com/feed/"
+    max_items: 20
+    enabled: true
+    notes: "Public RSS feed."
+
+  - name: Hugging Face Blog
+    type: rss
+    region: international
+    language: en
+    category: developer_tools
+    url_or_endpoint: "https://huggingface.co/blog/feed.xml"
+    max_items: 20
+    enabled: true
+    notes: "Public RSS feed; timeout will be skipped gracefully."
 
   - name: Hacker News AI Search
     type: hn_algolia
     region: international
     language: en
-    category: news_discussion
+    category: ai_media
     url_or_endpoint: "https://hn.algolia.com/api/v1/search_by_date"
+    max_items: 60
     enabled: true
-    notes: "Stable endpoint."
+    notes: "Stable API endpoint."
 
   - name: arXiv AI/CL
     type: arxiv
@@ -32,35 +82,76 @@
     language: en
     category: research
     url_or_endpoint: "http://export.arxiv.org/api/query"
+    max_items: 20
     enabled: true
-    notes: "Stable endpoint."
+    notes: "Stable API endpoint with polite query pacing."
 
   - name: GitHub Trending AI
     type: github_trending
     region: international
     language: en
-    category: open_source
+    category: open_source_project
     url_or_endpoint: "https://github.com/trending"
+    max_items: 10
     enabled: true
     notes: "Public trending page with lightweight parsing."
+
+  - name: TechCrunch AI
+    type: rss
+    region: international
+    language: en
+    category: ai_media
+    url_or_endpoint: "https://techcrunch.com/tag/artificial-intelligence/feed/"
+    max_items: 20
+    enabled: true
+    notes: "Public RSS feed."
+
+  - name: VentureBeat AI
+    type: rss
+    region: international
+    language: en
+    category: ai_media
+    url_or_endpoint: "https://venturebeat.com/ai/feed/"
+    max_items: 20
+    enabled: false
+    notes: "RSS endpoint returned 404; needs verification."
+
+  - name: The Decoder
+    type: rss_or_web
+    region: international
+    language: en
+    category: ai_media
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: confirm stable RSS endpoint."
+
+  - name: MIT Technology Review AI
+    type: rss
+    region: international
+    language: en
+    category: ai_media
+    url_or_endpoint: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+    max_items: 20
+    enabled: true
+    notes: "Public topic feed."
 
   - name: 量子位
     type: rss_or_web
     region: chinese
     language: zh
-    category: media
+    category: ai_media
     url_or_endpoint: "TODO"
     enabled: false
-    notes: "Placeholder; verify available feed"
+    notes: "TODO: verify public feed or compliant web endpoint."
 
   - name: 机器之心
     type: rss_or_web
     region: chinese
     language: zh
-    category: media
+    category: ai_media
     url_or_endpoint: "TODO"
     enabled: false
-    notes: "Placeholder; verify available feed"
+    notes: "TODO: verify public feed or compliant web endpoint."
 
   - name: 智谱 AI 官方
     type: rss_or_web
@@ -69,4 +160,40 @@
     category: official_blog
     url_or_endpoint: "TODO"
     enabled: false
-    notes: "Placeholder; verify official news/blog endpoint"
+    notes: "TODO: verify official news/blog endpoint."
+
+  - name: DeepSeek 官方
+    type: rss_or_web
+    region: chinese
+    language: zh
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: verify official public news endpoint."
+
+  - name: 月之暗面官方
+    type: rss_or_web
+    region: chinese
+    language: zh
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: verify official public news endpoint."
+
+  - name: 通义千问官方
+    type: rss_or_web
+    region: chinese
+    language: zh
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: verify official public news endpoint."
+
+  - name: 百度智能云 AI 官方
+    type: rss_or_web
+    region: chinese
+    language: zh
+    category: ai_company
+    url_or_endpoint: "TODO"
+    enabled: false
+    notes: "TODO: verify official public news endpoint."

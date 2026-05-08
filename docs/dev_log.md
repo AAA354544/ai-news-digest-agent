@@ -206,3 +206,29 @@ Add scheduled + manual GitHub Actions workflow to run digest pipeline and option
 
 ### Current Status
 Pending verification
+
+## Optimization Round 1
+
+### Goal
+Improve digest quality and source balance toward "AI research progress + AI industry and technology trend" while keeping compliant fetching and modular architecture.
+
+### Changes
+- Added source balancing layer (`balancer.py`) and integrated into candidate preparation.
+- Added `config/digest_policy.yaml` and policy loader in `src/config.py`.
+- Enhanced fetch robustness with `src/utils/http_utils.py` (headers, timeout, retry, 429/403/404 handling).
+- Updated fetchers to use safer network behavior and placeholder-aware skipping.
+- Expanded `config/sources.yaml` with more company/media sources and explicit TODO-disabled entries.
+- Updated prompts to emphasize research+industry positioning and non-paper-list output style.
+- Updated Markdown/HTML templates for clearer trend-oriented report presentation.
+- Updated README for architecture, strategy, config, verification, and limitations.
+
+### Verification
+- `python tests/manual_test_digest_policy.py`
+- `python tests/manual_test_balancer.py`
+- `python tests/manual_test_fetchers.py`
+- `python tests/manual_test_cleaner.py`
+- `set LLM_TEST_CANDIDATE_LIMIT=10 && python tests/manual_test_llm.py`
+- `python tests/manual_test_report.py`
+
+### Status
+Pending verification

@@ -29,3 +29,7 @@
 # Module 6-9 Final Integration Prompt
 
 本次 prompt 目标：补齐邮件发送、CLI pipeline、Streamlit MVP 页面和 GitHub Actions 定时运行，形成端到端闭环，并保持模块化、可复用、可手动验收。
+
+# Optimization Round 1 - Research and Industry Digest Balance Prompt
+
+本轮优化目标：在保持模块化与合规抓取前提下，提升日报质量与来源平衡，避免论文列表化，强化“科研进展 + 产业风向”表达，并补充策略配置、模板表达和开源文档展示。
