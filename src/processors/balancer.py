@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 
+from src.config import load_digest_policy
 from src.models import CandidateNews
 
 DEFAULT_SOURCE_QUOTAS: dict[str, int] = {
@@ -19,13 +20,17 @@ def balance_candidates_by_source_type(
     candidates: list[CandidateNews],
     max_candidates: int,
     quotas: dict[str, int] | None = None,
+    allow_overflow: bool = False,
 ) -> list[CandidateNews]:
     if max_candidates <= 0:
         return []
     if not candidates:
         return []
 
-    quotas = quotas or DEFAULT_SOURCE_QUOTAS
+    if quotas is None:
+        policy = load_digest_policy()
+        configured = policy.get("candidate_quotas", {})
+        quotas = configured if isinstance(configured, dict) else DEFAULT_SOURCE_QUOTAS
 
     grouped: dict[str, list[CandidateNews]] = defaultdict(list)
 
@@ -51,7 +56,9 @@ def balance_candidates_by_source_type(
             if len(selected) >= max_candidates:
                 return selected[:max_candidates]
 
-    if len(selected) < max_candidates:
+    # Optional fallback overflow: if enabled, fill from remaining candidates in original order.
+    # Default is strict quota mode to avoid one source dominating.
+    if allow_overflow and len(selected) < max_candidates:
         for item in candidates:
             if item.id in selected_ids:
                 continue

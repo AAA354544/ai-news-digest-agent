@@ -1,17 +1,99 @@
 ﻿from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 from src.config import AppConfig, load_app_config
-from src.models import CandidateNews, DailyDigest
+from src.models import CandidateNews, DailyDigest, SourceStatistics
 from src.processors.prompts import (
     build_digest_system_prompt,
     build_digest_user_prompt,
     extract_json_text,
 )
+
+
+def _extract_json_core(text: str) -> str:
+    raw = (text or "").strip()
+    if not raw:
+        return raw
+    start_obj = raw.find("{")
+    start_arr = raw.find("[")
+    starts = [x for x in [start_obj, start_arr] if x != -1]
+    if not starts:
+        return raw
+    start = min(starts)
+    end_obj = raw.rfind("}")
+    end_arr = raw.rfind("]")
+    end = max(end_obj, end_arr)
+    if end == -1 or end <= start:
+        return raw[start:]
+    return raw[start : end + 1]
+
+
+def _remove_trailing_commas(text: str) -> str:
+    # lightweight cleanup for common LLM JSON drift
+    return re.sub(r",\s*([}\]])", r"\1", text)
+
+
+def parse_llm_json_safely(json_text: str) -> dict:
+    digest_date = date.today().isoformat()
+    debug_dir = Path("data/digested")
+    debug_dir.mkdir(parents=True, exist_ok=True)
+
+    cleaned = _extract_json_core((json_text or "").strip())
+    cleaned = _remove_trailing_commas(cleaned)
+
+    try:
+        payload = json.loads(cleaned)
+        if not isinstance(payload, dict):
+            raise ValueError("Parsed JSON is not an object.")
+        return payload
+    except Exception as exc:
+        failed_path = debug_dir / f"{digest_date}_llm_json_parse_failed.txt"
+        failed_path.write_text(json_text or "", encoding="utf-8")
+        print(f"[analyzer] json parse failed, raw json text saved: {failed_path}")
+        print(f"[analyzer] parse error: {exc}")
+
+        # second pass: stricter local cleanup (works even without extra deps)
+        try:
+            cleaned2 = _remove_trailing_commas(_extract_json_core(json_text or ""))
+            payload = json.loads(cleaned2)
+            if not isinstance(payload, dict):
+                raise ValueError("Locally repaired JSON is not an object.")
+            repaired_path = debug_dir / f"{digest_date}_llm_repaired_response.json"
+            repaired_path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"[analyzer] local repaired json saved: {repaired_path}")
+            return payload
+        except Exception:
+            pass
+
+        # try optional robust repair
+        try:
+            from json_repair import repair_json
+
+            repaired = repair_json(json_text or "")
+            repaired_core = _remove_trailing_commas(_extract_json_core(repaired))
+            payload = json.loads(repaired_core)
+            if not isinstance(payload, dict):
+                raise ValueError("Repaired JSON is not an object.")
+
+            repaired_path = debug_dir / f"{digest_date}_llm_repaired_response.json"
+            repaired_path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"[analyzer] repaired json saved: {repaired_path}")
+            return payload
+        except Exception as repair_exc:
+            raise RuntimeError(
+                f"Failed to parse LLM JSON even after repair. Please inspect debug file: {failed_path}"
+            ) from repair_exc
 
 
 def normalize_digest_payload(payload: dict) -> dict:
@@ -27,6 +109,58 @@ def normalize_digest_payload(payload: dict) -> dict:
             "international_count": 0,
             "chinese_count": 0,
         }
+
+    appendix = payload.get("appendix")
+    if not isinstance(appendix, list):
+        payload["appendix"] = []
+    else:
+        normalized_appendix: list[dict[str, str]] = []
+        for item in appendix:
+            if not isinstance(item, dict):
+                continue
+
+            title = str(item.get("title") or "Untitled appendix item").strip() or "Untitled appendix item"
+
+            link_value = item.get("link")
+            if not link_value:
+                link_value = item.get("url")
+            if not link_value:
+                links_value = item.get("links")
+                if isinstance(links_value, list) and links_value:
+                    link_value = links_value[0]
+                elif isinstance(links_value, str):
+                    link_value = links_value
+            link = str(link_value or "").strip()
+
+            source_value = item.get("source")
+            if not source_value:
+                source_value = item.get("source_name")
+            if not source_value:
+                source_names_value = item.get("source_names")
+                if isinstance(source_names_value, list) and source_names_value:
+                    source_value = ", ".join(str(x).strip() for x in source_names_value if str(x).strip())
+                elif isinstance(source_names_value, str):
+                    source_value = source_names_value
+            source = str(source_value or "").strip()
+
+            brief_value = (
+                item.get("brief_summary")
+                or item.get("summary")
+                or item.get("description")
+                or item.get("snippet")
+                or ""
+            )
+            brief_summary = str(brief_value).strip()
+
+            normalized_appendix.append(
+                {
+                    "title": title,
+                    "link": link,
+                    "source": source,
+                    "brief_summary": brief_summary,
+                }
+            )
+        payload["appendix"] = normalized_appendix
 
     main_digest = payload.get("main_digest")
     if not isinstance(main_digest, list):
@@ -85,6 +219,15 @@ def normalize_digest_payload(payload: dict) -> dict:
     return payload
 
 
+def finalize_digest_statistics(digest: DailyDigest) -> DailyDigest:
+    """Ensure source_statistics exists and selected_items matches actual main_digest items."""
+    actual_selected_items = sum(len(group.items) for group in digest.main_digest)
+
+    stats = digest.source_statistics if digest.source_statistics is not None else SourceStatistics()
+    digest.source_statistics = stats.model_copy(update={"selected_items": actual_selected_items})
+    return digest
+
+
 def analyze_candidates_with_llm(candidates: list[CandidateNews], config: AppConfig | None = None) -> DailyDigest:
     from src.processors.llm_client import LLMClient
 
@@ -104,13 +247,13 @@ def analyze_candidates_with_llm(candidates: list[CandidateNews], config: AppConf
 
     try:
         json_text = extract_json_text(raw_response)
-        payload = json.loads(json_text)
+        payload = parse_llm_json_safely(json_text)
         payload = normalize_digest_payload(payload)
         if hasattr(DailyDigest, "model_validate"):
             digest = DailyDigest.model_validate(payload)
         else:
             digest = DailyDigest(**payload)
-        return digest
+        return finalize_digest_statistics(digest)
     except Exception as exc:
         debug_dir = Path("data/digested")
         debug_dir.mkdir(parents=True, exist_ok=True)
@@ -122,6 +265,7 @@ def analyze_candidates_with_llm(candidates: list[CandidateNews], config: AppConf
 
 
 def save_digest(digest: DailyDigest, output_dir: str = "data/digested") -> Path:
+    digest = finalize_digest_statistics(digest)
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{digest.date}_digest.json"

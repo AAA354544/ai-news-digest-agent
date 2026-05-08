@@ -11,3 +11,4 @@ jinja2
 openai
 typer
 rich
+json-repair
