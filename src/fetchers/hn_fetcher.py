@@ -20,21 +20,33 @@ class HackerNewsFetcher(BaseFetcher):
         items: list[CandidateNews] = []
         seen_urls: set[str] = set()
         max_items = self.source_config.max_items or 60
+        timeout = self.source_config.timeout_seconds or 20
+        retries = self.source_config.max_retries if self.source_config.max_retries is not None else 2
+        interval = self.source_config.request_interval_seconds if self.source_config.request_interval_seconds is not None else 0.5
+        cache_ttl = self.source_config.cache_ttl_seconds if self.source_config.cache_ttl_seconds is not None else 120
 
+        status_note = 'ok'
         for query in self.queries:
             if len(items) >= max_items:
                 break
             remaining = max_items - len(items)
             params = {'query': query, 'tags': 'story', 'hitsPerPage': min(self.hits_per_page, remaining)}
-            resp = safe_get(self.API_ENDPOINT, params=params, timeout=20, max_retries=2)
-            if resp is None:
-                print(f"[HackerNewsFetcher] query failed/empty: {query}")
+            result = safe_get(
+                self.API_ENDPOINT,
+                params=params,
+                timeout=timeout,
+                max_retries=retries,
+                request_interval_seconds=interval,
+                cache_ttl_seconds=cache_ttl,
+            )
+            if result.response is None:
+                status_note = result.status
                 continue
 
             try:
-                payload = resp.json()
+                payload = result.response.json()
             except Exception as exc:
-                print(f"[HackerNewsFetcher] invalid json for query {query}: {exc}")
+                status_note = f'json_error:{exc}'
                 continue
 
             for hit in payload.get('hits', []):
@@ -43,16 +55,13 @@ class HackerNewsFetcher(BaseFetcher):
                 url = (hit.get('url') or hit.get('story_url') or '').strip()
                 if not url and hn_object_id:
                     url = f'https://news.ycombinator.com/item?id={hn_object_id}'
-
                 if not title or not url or url in seen_urls:
                     continue
                 seen_urls.add(url)
-
                 author = hit.get('author', 'unknown')
                 points = hit.get('points', 0)
                 comments = hit.get('num_comments', 0)
                 snippet = f'author={author}; points={points}; comments={comments}; query={query}'
-
                 items.append(
                     CandidateNews(
                         id=self.build_candidate_id(url),
@@ -71,4 +80,6 @@ class HackerNewsFetcher(BaseFetcher):
                 )
                 if len(items) >= max_items:
                     break
+
+        self.set_health('ok' if items else ('empty' if status_note == 'ok' else status_note), f'items={len(items)}')
         return items

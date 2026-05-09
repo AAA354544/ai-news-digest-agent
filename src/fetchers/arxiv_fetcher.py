@@ -4,11 +4,10 @@ import time
 from typing import Any
 
 import feedparser
-import requests
 
 from src.fetchers.base import BaseFetcher
 from src.models import CandidateNews, SourceConfig
-from src.utils.http_utils import build_default_headers
+from src.utils.http_utils import safe_get
 
 
 class ArxivFetcher(BaseFetcher):
@@ -17,6 +16,9 @@ class ArxivFetcher(BaseFetcher):
         'cat:cs.AI',
         'cat:cs.CL',
         'cat:cs.LG',
+        'cat:cs.CV',
+        'cat:cs.IR',
+        'cat:stat.ML',
         'all:large language model',
         'all:agent',
         'all:retrieval augmented generation',
@@ -31,11 +33,14 @@ class ArxivFetcher(BaseFetcher):
         items: list[CandidateNews] = []
         seen_urls: set[str] = set()
         max_items = self.source_config.max_items or 20
+        timeout = self.source_config.timeout_seconds or 20
+        retries = self.source_config.max_retries if self.source_config.max_retries is not None else 1
+        interval = self.source_config.request_interval_seconds if self.source_config.request_interval_seconds is not None else 2.0
 
+        last_status = 'ok'
         for query in self.queries:
             if len(items) >= max_items:
                 break
-
             params = {
                 'search_query': query,
                 'start': 0,
@@ -43,28 +48,24 @@ class ArxivFetcher(BaseFetcher):
                 'sortBy': 'submittedDate',
                 'sortOrder': 'descending',
             }
-
-            try:
-                resp = requests.get(self.API_ENDPOINT, params=params, timeout=20, headers=build_default_headers())
-            except requests.Timeout:
-                print(f"[ArxivFetcher] timeout: {query}")
-                continue
-            except requests.RequestException as exc:
-                print(f"[ArxivFetcher] request error ({query}): {exc}")
-                continue
-
-            if resp.status_code == 429:
-                print(f"[ArxivFetcher] rate limited (429) on query '{query}'. Stop remaining arXiv queries.")
-                break
-            if resp.status_code in {403, 404}:
-                print(f"[ArxivFetcher] HTTP {resp.status_code} on query '{query}'.")
+            result = safe_get(
+                self.API_ENDPOINT,
+                params=params,
+                timeout=timeout,
+                max_retries=retries,
+                request_interval_seconds=interval,
+                cache_ttl_seconds=60,
+            )
+            if result.response is None:
+                last_status = result.status
+                if result.status == 'rate_limited':
+                    break
                 continue
 
             try:
-                resp.raise_for_status()
-                parsed = feedparser.parse(resp.text)
+                parsed = feedparser.parse(result.response.text)
             except Exception as exc:
-                print(f"[ArxivFetcher] parse/response failed ({query}): {exc}")
+                last_status = f'parse_error:{exc}'
                 continue
 
             for entry in getattr(parsed, 'entries', []):
@@ -73,12 +74,10 @@ class ArxivFetcher(BaseFetcher):
                 if not title or not link or link in seen_urls:
                     continue
                 seen_urls.add(link)
-
-                authors = [author.get('name', '').strip() for author in entry.get('authors', []) if author.get('name')]
+                authors = [a.get('name', '').strip() for a in entry.get('authors', []) if a.get('name')]
                 summary = (entry.get('summary') or '').strip().replace('\n', ' ')
                 if authors:
                     summary = f"authors={', '.join(authors[:5])}; {summary}"
-
                 items.append(
                     CandidateNews(
                         id=self.build_candidate_id(link),
@@ -97,8 +96,7 @@ class ArxivFetcher(BaseFetcher):
                 )
                 if len(items) >= max_items:
                     break
+            time.sleep(interval)
 
-            if len(items) < max_items:
-                time.sleep(2.0)
-
+        self.set_health('ok' if items else ('empty' if last_status == 'ok' else last_status), f'items={len(items)}')
         return items
