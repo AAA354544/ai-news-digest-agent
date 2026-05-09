@@ -255,3 +255,25 @@ Polish project presentation and improve source diversity/operability without cha
 
 ### Status
 Pending verification
+
+## Optimization Round 3 - Compliant Fetch Stability Enhancement
+
+### Goal
+Implement lightweight, compliant fetch robustness upgrades (no anti-bot bypass) while keeping pipeline continuity and module compatibility.
+
+### Changes
+- Unified fetch step orchestration now captures per-source health status and persists health summary.
+- Added broader fetcher routing support (API fetchers + optional RSSHub) with fail-soft behavior.
+- Added per-source config knobs in `sources.yaml` (`max_items`, timeout/retry/interval/cache fields).
+- Enhanced manual fetch test to report source status using fetcher health (`ok`, `empty`, `timeout`, `http_404`, `rate_limited`, etc.).
+- Added email safety enhancements: multi-recipient parsing, recipient cap, masked recipient logging, and dry-run support.
+- Added `.env.example` placeholders for RSSHub and email safety controls.
+
+### Verification
+- `python tests/manual_test_fetchers.py`
+- `python tests/manual_test_pipeline.py`
+- `python tests/manual_test_report.py`
+- `python tests/manual_test_email.py`
+
+### Status
+Pending verification

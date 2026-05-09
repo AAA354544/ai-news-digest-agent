@@ -37,3 +37,7 @@
 # Optimization Round 2 - UI, Email, Sources, and Source Health Prompt
 
 本次 prompt 目标：优化项目展示与内容源质量，包括 README/Mermaid 修正、Streamlit 展示增强、HTML 邮件模板优化、来源扩展与 source health 汇总，以及更平衡的 LLM 来源策略。
+
+# Optimization Round 3 - Compliant Fetch Stability Enhancement Prompt
+
+本次 prompt 目标：在不做绕过型反爬的前提下，为抓取链路增加轻量稳定性能力（超时、有限重试、限速、状态可观测、失败降级），并保持 Markdown/HTML/SMTP/CLI/Streamlit/GitHub Actions 兼容。

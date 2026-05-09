@@ -98,3 +98,16 @@ streamlit run app.py
 ## Repo Hygiene
 - Do not commit `.env`
 - Do not commit runtime data under `data/` and `outputs/`
+
+## Optional RSSHub
+RSSHub is supported as an **optional fallback** only.
+
+- Set `RSSHUB_ENABLED=true` and `RSSHUB_BASE_URL=https://<your-rsshub-instance>` in `.env` to enable it.
+- If not configured, RSSHub sources are skipped and the pipeline continues.
+- Official RSS/API sources remain the default priority.
+
+## Compliance & Stability
+- Public sources only, no login/paywall/captcha bypass.
+- Per-source `max_items`, timeout, retry, and request interval are supported.
+- 403/404/429/timeout are recorded in source health and do not crash the full pipeline.
+- Source health summary is saved to `data/raw/YYYY-MM-DD_source_health.json`.
