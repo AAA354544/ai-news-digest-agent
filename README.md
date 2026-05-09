@@ -183,3 +183,103 @@ python tests/manual_test_streamlit_logic.py
 ```
 
 `.env` should never be committed.
+
+## Digest Quality Convergence Policy
+
+Default quality targets:
+- Main digest items: 10-15 (default target around 12)
+- Appendix items: 15-25 (default target around 20)
+- Final selected source mix: international ~70%, chinese ~30% (with practical fallback when one side is insufficient)
+
+Quality-first selection:
+- Prioritize research breakthroughs, model capability updates, agent/toolchain progress, open-source infra, major company strategy updates, infra/chip shifts, and policy/safety events.
+- De-prioritize marketing-style posts, weakly-related AI noise, lifestyle/anxiety content, and low-signal community chatter.
+- Same-event multi-source entries are merged before final digest generation.
+
+Appendix de-dup policy:
+- Items already selected in main digest are removed from appendix by URL/title similarity/event overlap.
+- Appendix keeps only non-duplicated supporting references.
+
+## Zhipu Multi-stage LLM Configuration
+
+The project supports three logical LLM stages, all using Zhipu OpenAI-compatible API by default:
+
+1. preprocess/scoring layer (lightweight): default `glm-4-flash-250414`
+2. final digest generation layer: default `glm-4.7-flash`
+3. repair/consistency layer: default `glm-4-flash-250414`
+
+Core env vars:
+- `LLM_PIPELINE_MODE=single|layered`
+- `LLM_PREPROCESS_ENABLED=true|false`
+- `LLM_PREPROCESS_PROVIDER=zhipu`
+- `LLM_PREPROCESS_MODEL=glm-4-flash-250414`
+- `LLM_FINAL_PROVIDER=zhipu`
+- `LLM_FINAL_MODEL=glm-4.7-flash`
+- `LLM_REPAIR_ENABLED=true|false`
+- `LLM_REPAIR_PROVIDER=zhipu`
+- `LLM_REPAIR_MODEL=glm-4-flash-250414`
+
+Single-key mode (recommended default):
+- Configure only `ZHIPU_API_KEY` and optional `ZHIPU_BASE_URL`.
+- All stages fall back to this key.
+
+Optional per-stage keys:
+- `ZHIPU_PREPROCESS_API_KEY`
+- `ZHIPU_FINAL_API_KEY`
+- `ZHIPU_REPAIR_API_KEY`
+
+Key fallback order:
+- preprocess: `ZHIPU_PREPROCESS_API_KEY` -> `ZHIPU_API_KEY`
+- final: `ZHIPU_FINAL_API_KEY` -> `ZHIPU_API_KEY`
+- repair: `ZHIPU_REPAIR_API_KEY` -> `ZHIPU_API_KEY`
+
+Compatibility behavior:
+- `LLM_PIPELINE_MODE=single`: uses existing single-stage behavior (`ZHIPU_MODEL` / final config fallback).
+- `LLM_PIPELINE_MODE=layered`: enables preprocess/final/repair stage settings.
+- preprocess failure falls back to deterministic local scoring.
+- repair failure falls back to local JSON repair/normalizer logic.
+
+## Appendix Quality Policy
+- Appendix is supplementary reference content, not a low-quality overflow bucket.
+- Clearly irrelevant non-AI items are filtered out before appendix output.
+- Appendix brief summaries describe the event itself and never expose internal filtering/debug rationale.
+- Appendix items are de-duplicated against main digest by URL and title similarity.
+
+## HTML Newsletter Improvements
+- Narrow email-friendly container width (~700px) with hidden preheader.
+- Added Today's Brief and Must-read Top 3 sections.
+- Main links use short labels (Source 1/Source 2/Read source) for better readability.
+- Run Summary highlights candidate/event/selection coverage metrics for quick operational context.
+
+
+## Research Coverage Safeguards
+- The digest keeps a research floor when qualified candidates are available: default minimum 3 research items in main digest (RESEARCH_MIN_MAIN_ITEMS=3, target ratio 0.25).
+- Research quota is quality-aware: it does not force unrelated papers when no qualified research sources are available.
+- Research candidates are protected during candidate balancing, event selection, and final quality postprocess.
+
+## arXiv Query Expansion and Fallback
+- Topic-aware arXiv expansion includes agent/tool-use/memory/workflow/multi-agent/planning/RAG variants.
+- arXiv categories cover cs.AI, cs.CL, cs.LG, cs.CV, cs.IR, cs.HC, stat.ML.
+- On arXiv 429/timeout, the fetcher can use recent cache fallback (data/cache/arxiv_latest.json, up to 3 days) and marks status as cache_fallback.
+
+## Research Stats in Run Summary
+- Added: 
+aw_research_candidates, cleaned_research_candidates, 
+esearch_event_clusters, selected_research_count, ppendix_research_count, 
+esearch_quota_met, rxiv_status, semantic_scholar_status.
+
+## Final Quality Closure for Research Coverage
+- Enforced effective research quota in final selection (not just stats).
+- Added topic-specific research query expansion for arXiv/Semantic Scholar (reasoning/long-context/memory focus).
+- Added hard appendix reject patterns and stronger topic relevance gating.
+- Added final-region hard constraint to keep international/chinese ratio near target in main digest.
+- Added research observability fields: selected_research_count, research_quota_met, research_shortage_reason, arxiv_status, semantic_scholar_status.
+## Stability Closure Notes
+- Final main digest now has a hard lower bound with backfill (`MAIN_DIGEST_MIN_ITEMS`), so quality filters won't collapse output to only a few items when candidate pool is sufficient.
+- Research quota is enforced in final selection (not just tracked in stats), with shortage reason reporting when research supply is truly insufficient.
+- Region ratio is treated as a preference with fallback, not a destructive filter that empties final digest.
+- Appendix uses hard reject + topic relevance threshold and is not used as a noise sink.
+## Final Small Stability Tweaks
+- Appendix selection now targets 5-10 high-quality supplemental items (`APPENDIX_TARGET_ITEMS=8`, `APPENDIX_MIN_ITEMS=5`, `APPENDIX_MAX_ITEMS=10`) with shortage reason reporting when supply is insufficient.
+- Final LLM uses `glm-4.7-flash` by default and automatically falls back to `glm-4-flash-250414` after 2 transient failures (busy/rate-limit/timeout class errors).
+- Fallback is automatic and does not require manual model switching.

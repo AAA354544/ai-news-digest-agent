@@ -309,3 +309,117 @@ Pending verification
 - Streamlit email behavior is now observable (`success/error/recipients/dry_run`).
 - Missing SMTP config is shown as readable env var checklist.
 - Download buttons remain functional after generation.
+
+## Digest Quality Convergence Optimization
+
+### Observed Issues
+- Chinese content could dominate the final main digest after source expansion.
+- Main digest length drifted too long (beyond intended 10-15).
+- Appendix length drifted too long and could overlap with main digest.
+- Low-value/weakly-related items occasionally entered top stories.
+
+### Implemented Fixes
+- Added post-LLM quality convergence layer (`digest_quality.py`) to enforce:
+  - main digest cap (default target 12, hard cap <=15)
+  - appendix cap (default target 20, cap <=25)
+  - international/chinese selected ratio targeting (~70/30)
+  - low-value demotion/removal
+  - appendix de-dup against main digest (URL/title similarity)
+- Extended source statistics with quality observability fields:
+  - selected_international_count
+  - selected_chinese_count
+  - appendix_count
+  - dropped_low_value_count
+  - duplicate_removed_from_appendix_count
+- Updated prompts for "AI Research & Industry Digest" quality expectations and anti-noise guidance.
+
+### Validation
+- Added `tests/manual_test_digest_quality_policy.py` (offline, no API/network).
+- Existing pipeline/report/manual tests remain compatible.
+
+## Zhipu Multi-stage LLM Config Support
+
+### Goal
+Allow preprocess/final/repair stages to use different Zhipu models while keeping single-key compatibility and safe fallback behavior.
+
+### Implemented
+- Added stage-level provider/model configuration fields.
+- Added optional stage-specific Zhipu API keys with fallback to `ZHIPU_API_KEY`.
+- Normalized `ZHIPU_BASE_URL` to avoid duplicated `/chat/completions` paths.
+- Analyzer now calls stage-specific LLM invocations:
+  - preprocess stage in layered mode
+  - final stage for digest generation
+  - optional repair stage for JSON repair fallback
+- Added `manual_test_llm_layers.py` for configuration and optional smoke tests.
+
+### Fallback Rules
+- preprocess failure -> deterministic local scoring
+- repair failure -> local repair/normalizer path
+- final failure -> explicit error
+
+## Report Display Quality and Appendix Cleanup Optimization
+
+### Issues Fixed
+- Appendix leaked internal policy/debug wording into reader-facing reports.
+- Irrelevant non-AI items could still appear in appendix.
+- Event clustering was too permissive for some HN/YouTube cases.
+- HTML newsletter still looked like a generic web report.
+
+### Changes
+- Rebuilt src/processors/digest_quality.py with reader-safe text sanitization, appendix relevance filtering, low-value demotion, and main/appendix de-dup.
+- Tightened merge rules in src/processors/event_clusterer.py (stricter HN/YouTube and specific-token requirements).
+- Strengthened appendix constraints in src/processors/prompts.py.
+- Upgraded 	emplates/digest.html.jinja to newsletter-style layout (preheader, brief, top-3, short link labels, run summary).
+- Expanded markdown source statistics fields in 	emplates/digest.md.jinja.
+- Updated 	ests/manual_test_event_clusterer.py and 	ests/manual_test_digest_quality_policy.py for regression checks.
+
+### Verification
+- python tests/manual_test_digest_quality_policy.py
+- python tests/manual_test_event_clusterer.py
+- python tests/manual_test_pipeline.py
+- python tests/manual_test_report.py
+- python tests/manual_test_email.py
+
+
+## Research Coverage Recovery Optimization
+
+### Problem
+- Research/paper items were squeezed out by tool/news/community content, causing weak scientific coverage in final digest.
+
+### Fixes
+- Added research quota controls (min/target/max) and enabled quota logic in final quality policy.
+- Protected research candidates in pre-LLM candidate selection and final digest postprocess.
+- Expanded arXiv topic queries for agent/tool-use/memory/workflow focus areas and broader ML categories.
+- Added arXiv cache fallback on rate-limit/timeout with health status cache_fallback.
+- Added Semantic Scholar fetcher as research fallback source.
+- Added research observability metrics in source statistics and pipeline summary.
+
+### Verification
+- python tests/manual_test_research_quota.py
+- python tests/manual_test_fetchers.py
+- python tests/manual_test_pipeline.py
+
+## Final Quality Closure - Research and Relevance
+
+### Problems
+- Research quota not effectively enforced in final digest selection.
+- Chinese share could dominate final main digest.
+- Appendix still had noisy/weakly-related items.
+- Topic relevance was too loose for reasoning/long-context/memory topics.
+
+### Fixes
+- Enforced research quota in final quality policy with shortage reason reporting.
+- Added research-preserving selection before final LLM events and in final postprocess.
+- Expanded arXiv/Semantic Scholar query sets for reasoning/long-context/memory topics.
+- Added arXiv cache fallback usage visibility and research status metrics.
+- Added hard appendix reject patterns and stronger topic relevance thresholds.
+- Added hard final-region ratio enforcement to keep main digest near 70/30 target.
+## Stability Closure - Final Selection Recovery
+- Fixed regression where final digest could shrink to 5 items despite large cleaned candidate pool.
+- Added backfill mechanism to enforce main digest lower bound when candidates are sufficient.
+- Strengthened research quota enforcement in final selection and added shortage diagnostics.
+- Unified stats semantics between pipeline logs and report output (`cleaned` vs `final_llm_events` mismatch fixed via cleaning stats sidecar).
+## Final Small Stability Adjustments
+- Relaxed appendix selection from overly strict behavior (Appendix=0) to target 5-10 high-quality supplemental items.
+- Added final-model fallback: `glm-4.7-flash` retries 2 times on transient errors, then falls back to `glm-4-flash-250414`.
+- Added fallback observability fields (`final_model_used`, `final_fallback_used`, `final_fallback_reason`) and appendix shortage diagnostics.

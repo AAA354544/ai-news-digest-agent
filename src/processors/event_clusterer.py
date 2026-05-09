@@ -14,6 +14,9 @@ ENTITY_HINTS = {
     'openai', 'anthropic', 'claude', 'gemini', 'deepseek', 'qwen', 'nvidia', 'microsoft',
     'google', 'meta', 'mistral', 'hugging face', 'langchain', 'llamaindex', 'arxiv', 'kimi',
 }
+GENERIC_ENTITY_TERMS = {
+    'ai', 'llm', 'agent', 'model', 'openai', 'anthropic', 'claude', 'gemini',
+}
 
 STOPWORDS = {
     'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'for', 'with', 'on', 'at', 'by', 'from',
@@ -68,6 +71,12 @@ def _entity_overlap(title_a: str, title_b: str) -> float:
     return min(1.0, matched / 2.0)
 
 
+def _shared_specific_tokens(title_a: str, title_b: str) -> int:
+    ta = {t for t in _tokenize(title_a) if t not in GENERIC_ENTITY_TERMS and len(t) >= 3}
+    tb = {t for t in _tokenize(title_b) if t not in GENERIC_ENTITY_TERMS and len(t) >= 3}
+    return len(ta.intersection(tb))
+
+
 def _domain(url: str) -> str:
     return urlsplit(url).netloc.lower().strip()
 
@@ -80,6 +89,11 @@ def _same_or_near_url(a: str, b: str) -> bool:
     pa = urlsplit(a)
     pb = urlsplit(b)
     if pa.netloc.lower() == pb.netloc.lower() and pa.path.rstrip('/') == pb.path.rstrip('/'):
+        qa = (pa.query or '').strip().lower()
+        qb = (pb.query or '').strip().lower()
+        # Keep HN and similar id-based URLs strict: same path but different query should not merge.
+        if qa or qb:
+            return qa == qb
         return True
     return False
 
@@ -137,23 +151,41 @@ def _should_merge(candidate: CandidateNews, cluster: EventCluster) -> bool:
     if _same_or_near_url(candidate.url, rep.url):
         return True
 
+    candidate_domain = _domain(candidate.url)
+    rep_domain = _domain(rep.url)
+
     t1 = _tokenize(candidate.title)
     t2 = _tokenize(cluster.representative_title)
     jac = _jaccard(t1, t2)
     seq = difflib.SequenceMatcher(None, candidate.title.lower(), cluster.representative_title.lower()).ratio()
     ent = _entity_overlap(candidate.title, cluster.representative_title)
+    specific_overlap = _shared_specific_tokens(candidate.title, cluster.representative_title)
 
     c_dt = parse_candidate_datetime(candidate.published_at)
     r_dt = parse_candidate_datetime(rep.published_at)
     time_ok = _time_close(c_dt, r_dt, hours=72)
 
-    if jac >= 0.45 and time_ok:
+    # Keep HN clusters strict: only merge if titles are highly similar or they resolve to same target URL.
+    if candidate.source_type == 'hn_algolia' and rep.source_type == 'hn_algolia':
+        return time_ok and (jac >= 0.6 and seq >= 0.82 or seq >= 0.9)
+
+    # Keep YouTube clusters strict to avoid accidental merges across unrelated videos.
+    if 'youtube.com' in candidate_domain or 'youtu.be' in candidate_domain or 'youtube.com' in rep_domain or 'youtu.be' in rep_domain:
+        return time_ok and (seq >= 0.88 and (jac >= 0.55 or specific_overlap >= 1))
+
+    if not time_ok:
+        return False
+
+    # Strong lexical agreement.
+    if jac >= 0.52 and seq >= 0.78:
         return True
-    if seq >= 0.78 and time_ok:
+    # Title near-duplicate.
+    if seq >= 0.9:
         return True
-    if jac >= 0.22 and ent > 0 and time_ok:
+    # Require concrete overlap (not only generic AI terms) for looser merges.
+    if specific_overlap >= 2 and (jac >= 0.35 or seq >= 0.68):
         return True
-    if ent >= 0.5 and seq >= 0.5 and time_ok:
+    if specific_overlap >= 1 and ent >= 0.5 and jac >= 0.3 and seq >= 0.6:
         return True
 
     return False

@@ -11,80 +11,139 @@ from src.models import CandidateNews
 from src.processors.event_clusterer import cluster_candidates_into_events
 
 
+def _candidate(
+    cid: str,
+    title: str,
+    url: str,
+    source_name: str,
+    source_type: str = 'rss',
+    summary: str = '',
+    published_at: str | None = None,
+) -> CandidateNews:
+    return CandidateNews(
+        id=cid,
+        title=title,
+        url=url,
+        source_name=source_name,
+        source_type=source_type,
+        region='international',
+        language='en',
+        category_hint='official_blog',
+        summary_or_snippet=summary,
+        published_at=published_at,
+    )
+
+
+def _cluster_index_for_title(clusters, keyword: str) -> int | None:
+    for idx, c in enumerate(clusters):
+        if keyword.lower() in c.representative_title.lower() or any(keyword.lower() in s.title.lower() for s in c.sources):
+            return idx
+    return None
+
+
 def main() -> None:
     samples = [
-        CandidateNews(
-            id='1',
-            title='OpenAI announces new Agent SDK update',
-            url='https://openai.com/news/agent-sdk-update',
-            source_name='OpenAI News',
-            source_type='rss',
-            region='international',
-            language='en',
-            category_hint='official_blog',
-            summary_or_snippet='Official announcement of Agent SDK updates.',
+        _candidate(
+            'a1',
+            'OpenAI launches new Agent SDK runtime',
+            'https://openai.com/blog/agent-sdk-runtime',
+            'OpenAI',
+            'rss',
+            'official announcement',
+            '2026-05-09T10:30:00+08:00',
         ),
-        CandidateNews(
-            id='2',
-            title='Media report: OpenAI Agent SDK brings multi-step tooling',
-            url='https://tech.example.com/openai-agent-sdk',
-            source_name='Tech Media',
-            source_type='rss',
-            region='international',
-            language='en',
-            category_hint='ai_media',
-            published_at='2026-05-09T10:30:00+08:00',
-            summary_or_snippet='Media interpretation of the same OpenAI Agent SDK update.',
+        _candidate(
+            'a2',
+            'Media analysis: OpenAI Agent SDK runtime improves orchestration',
+            'https://tech.example.com/openai-agent-sdk-runtime-analysis',
+            'Tech Media',
+            'rss',
+            'media interpretation of same event',
+            '2026-05-09T02:35:00',
         ),
-        CandidateNews(
-            id='2b',
-            title='OpenAI Agent SDK update improves multi-step tool orchestration',
-            url='https://blog.example.com/openai-agent-sdk-analysis',
-            source_name='Dev Blog',
-            source_type='rss',
-            region='international',
-            language='en',
-            category_hint='developer_tools',
-            published_at='2026-05-09T02:35:00',
-            summary_or_snippet='Naive datetime sample for the same event to validate timezone normalization.',
+        _candidate(
+            'a3',
+            'Developer notes on OpenAI Agent SDK runtime release',
+            'https://dev.example.com/openai-agent-sdk-runtime-notes',
+            'Dev Blog',
+            'rss',
+            'dev perspective of same event',
+            '2026-05-09T03:35:00+00:00',
         ),
-        CandidateNews(
-            id='3',
-            title='GitHub repo gains stars for OpenAI Agent SDK examples',
-            url='https://github.com/example/openai-agent-sdk-examples',
-            source_name='GitHub Trending AI',
-            source_type='github_trending',
-            region='international',
-            language='en',
-            category_hint='open_source_project',
-            summary_or_snippet='Community examples around the same Agent SDK event.',
+        _candidate(
+            'b1',
+            'Terax 7MB AI terminal now available for local use',
+            'https://news.ycombinator.com/item?id=111111',
+            'Hacker News AI Search',
+            'hn_algolia',
+            'tiny local terminal project',
         ),
-        CandidateNews(
-            id='4',
-            title='Anthropic releases new Claude capabilities for coding agents',
-            url='https://anthropic.com/news/claude-coding-agent',
-            source_name='Anthropic News',
-            source_type='rss',
-            region='international',
-            language='en',
-            category_hint='official_blog',
-            summary_or_snippet='Different event: Claude coding agent capability release.',
+        _candidate(
+            'b2',
+            'Top LLMs Have a Podcast Together',
+            'https://www.youtube.com/watch?v=abc123',
+            'Hacker News AI Search',
+            'hn_algolia',
+            'podcast discussion',
+        ),
+        _candidate(
+            'c1',
+            'What if new proofs make LLM training cheaper?',
+            'https://example.com/new-proofs-llm-training',
+            'AI Research Blog',
+            'rss',
+            'training theory discussion',
+        ),
+        _candidate(
+            'c2',
+            'Claude signup workflow is terrible',
+            'https://news.ycombinator.com/item?id=222222',
+            'Hacker News AI Search',
+            'hn_algolia',
+            'product UX complaint',
+        ),
+        _candidate(
+            'd1',
+            'Same URL duplicate test',
+            'https://example.org/path/post',
+            'Source A',
+            'rss',
+            'first record',
+        ),
+        _candidate(
+            'd2',
+            'Same URL duplicate test mirror title',
+            'https://example.org/path/post/',
+            'Source B',
+            'rss',
+            'second record',
         ),
     ]
 
-    clusters = cluster_candidates_into_events(samples, topic='AI Agent memory')
+    clusters = cluster_candidates_into_events(samples, topic='AI agent runtime')
 
     print(f'cluster count: {len(clusters)}')
     for c in clusters:
         print(f"- {c.event_id} | evidence={c.evidence_count} | title={c.representative_title}")
-        print(f"  sources={c.source_names}")
 
-    if len(clusters) > len(samples):
-        raise RuntimeError('Unexpected cluster explosion.')
+    openai_idx = _cluster_index_for_title(clusters, 'Agent SDK runtime')
+    terax_idx = _cluster_index_for_title(clusters, 'Terax')
+    podcast_idx = _cluster_index_for_title(clusters, 'Podcast')
+    proofs_idx = _cluster_index_for_title(clusters, 'new proofs')
+    claude_idx = _cluster_index_for_title(clusters, 'signup workflow')
+    same_url_idx = _cluster_index_for_title(clusters, 'Same URL duplicate test')
 
-    merged_ok = any(c.evidence_count >= 2 for c in clusters)
-    if not merged_ok:
-        raise RuntimeError('Expected at least one merged event cluster with evidence_count >= 2.')
+    if openai_idx is None or clusters[openai_idx].evidence_count < 2:
+        raise RuntimeError('Expected OpenAI official+media+dev items to merge into one cluster.')
+
+    if terax_idx is None or podcast_idx is None or terax_idx == podcast_idx:
+        raise RuntimeError('Terax terminal and podcast should not be merged.')
+
+    if proofs_idx is None or claude_idx is None or proofs_idx == claude_idx:
+        raise RuntimeError('New proofs event and Claude signup workflow should not be merged.')
+
+    if same_url_idx is None or clusters[same_url_idx].evidence_count < 2:
+        raise RuntimeError('Same/near URL items should merge.')
 
     print('Module event clusterer test completed.')
 

@@ -65,6 +65,7 @@ class AppendixItem(BaseModel):
 class SourceStatistics(BaseModel):
     total_candidates: int = 0
     cleaned_candidates: int = 0
+    dedup_candidates: Optional[int] = None
     selected_items: int = 0
     source_count: int = 0
     international_count: Optional[int] = None
@@ -75,6 +76,27 @@ class SourceStatistics(BaseModel):
     event_clusters: Optional[int] = None
     final_llm_events: Optional[int] = None
     appendix_items: Optional[int] = None
+    selected_international_count: Optional[int] = None
+    selected_chinese_count: Optional[int] = None
+    appendix_count: Optional[int] = None
+    dropped_low_value_count: Optional[int] = None
+    duplicate_removed_from_appendix_count: Optional[int] = None
+    raw_research_candidates: Optional[int] = None
+    cleaned_research_candidates: Optional[int] = None
+    research_event_clusters: Optional[int] = None
+    selected_research_count: Optional[int] = None
+    appendix_research_count: Optional[int] = None
+    arxiv_status: Optional[str] = None
+    semantic_scholar_status: Optional[str] = None
+    research_quota_met: Optional[bool] = None
+    research_shortage_reason: Optional[str] = None
+    total_source_count: Optional[int] = None
+    shortage_reason: Optional[str] = None
+    ratio_fallback_reason: Optional[str] = None
+    appendix_shortage_reason: Optional[str] = None
+    final_model_used: Optional[str] = None
+    final_fallback_used: Optional[bool] = None
+    final_fallback_reason: Optional[str] = None
 
 
 class DailyDigest(BaseModel):

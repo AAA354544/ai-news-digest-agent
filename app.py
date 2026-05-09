@@ -124,7 +124,7 @@ def main() -> None:
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            if st.button('Run Full Pipeline', use_container_width=True, key='run_full_pipeline_btn'):
+            if st.button('Run Full Pipeline', width='stretch', key='run_full_pipeline_btn'):
                 try:
                     with st.spinner('Running full pipeline...'):
                         # Temporarily apply dry_run in runtime config object without touching .env.
@@ -162,7 +162,7 @@ def main() -> None:
                         st.exception(exc)
 
         with col2:
-            if st.button('Generate Report Only', use_container_width=True, key='report_only_btn'):
+            if st.button('Generate Report Only', width='stretch', key='report_only_btn'):
                 try:
                     with st.spinner('Generating report...'):
                         md, html = run_report_step()
@@ -175,7 +175,7 @@ def main() -> None:
                         st.exception(exc)
 
         with col3:
-            if st.button('Send Latest Email', use_container_width=True, key='send_latest_email_btn'):
+            if st.button('Send Latest Email', width='stretch', key='send_latest_email_btn'):
                 try:
                     if _smtp_missing_keys(cfg):
                         st.error('SMTP config missing: ' + ', '.join(_smtp_missing_keys(cfg)))
@@ -195,7 +195,7 @@ def main() -> None:
                         st.exception(exc)
 
         with col4:
-            if st.button('Refresh Latest Report', use_container_width=True, key='refresh_report_btn'):
+            if st.button('Refresh Latest Report', width='stretch', key='refresh_report_btn'):
                 st.rerun()
 
     with tabs[2]:
@@ -230,7 +230,7 @@ def main() -> None:
         if not health:
             st.info('Run fetchers test or pipeline to update source health.')
         else:
-            st.dataframe(health, use_container_width=True)
+            st.dataframe(health, width='stretch')
 
         latest_digest = _find_latest(PROJECT_ROOT / 'data' / 'digested', '*_digest.json')
         if latest_digest and latest_digest.exists():

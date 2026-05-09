@@ -5,105 +5,167 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Research &amp; Industry Digest - {{ digest.date }}</title>
   <style>
-    body { margin: 0; padding: 16px; background: #f5f7fb; color: #1f2937; font-family: Arial, sans-serif; }
-    .container { max-width: 920px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
-    .hero { background: #111827; color: #f9fafb; padding: 18px 20px; }
-    .hero h1 { margin: 0 0 8px 0; font-size: 24px; }
-    .hero .meta { font-size: 14px; color: #d1d5db; }
-    .hero .stats { margin-top: 10px; font-size: 13px; color: #e5e7eb; }
-    .section { padding: 18px 20px; }
-    .section h2 { margin: 0 0 14px 0; font-size: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff; }
-    .title { font-size: 17px; margin: 0 0 8px 0; }
-    .line { margin: 6px 0; font-size: 14px; }
+    body { margin: 0; padding: 16px; background: #f3f4f6; color: #111827; font-family: Arial, sans-serif; }
+    .preheader { display:none!important; visibility:hidden; opacity:0; color:transparent; height:0; width:0; overflow:hidden; mso-hide:all; }
+    .container { max-width: 700px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .hero { background: #0f172a; color: #f8fafc; padding: 18px 20px; }
+    .hero h1 { margin: 0; font-size: 24px; line-height: 1.25; }
+    .hero p { margin: 6px 0 0 0; color: #cbd5e1; font-size: 13px; }
+    .hero-meta { margin-top: 10px; font-size: 13px; color: #e2e8f0; }
+    .section { padding: 16px 20px; }
+    .section h2 { margin: 0 0 10px 0; font-size: 18px; color: #111827; }
+    .brief { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+    .brief ul { margin: 0; padding-left: 18px; }
+    .metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .metric { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; background: #fff; font-size: 12px; }
+    .metric .label { color: #6b7280; display: block; }
+    .metric .value { color: #111827; font-weight: 700; font-size: 14px; }
+    .category { margin-top: 14px; }
+    .category-title { font-size: 16px; margin: 0 0 8px 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fff; }
+    .must-read { border-color: #93c5fd; background: #f0f9ff; }
+    .title { margin: 0 0 6px 0; font-size: 15px; line-height: 1.4; }
+    .line { margin: 6px 0; font-size: 13px; line-height: 1.5; }
     .tags { margin: 6px 0; }
-    .tag { display: inline-block; font-size: 12px; background: #ecfeff; color: #0e7490; border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; }
-    ul { margin: 6px 0 0 20px; padding: 0; }
-    a { color: #2563eb; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    .tag { display:inline-block; font-size:11px; background:#eff6ff; color:#1d4ed8; border-radius:999px; padding:2px 8px; margin-right:6px; margin-bottom:4px; }
+    .links a { color:#2563eb; text-decoration:none; margin-right:8px; font-size:13px; }
     .appendix-item { border-left: 3px solid #d1d5db; padding-left: 10px; margin-bottom: 10px; }
-    .stats-footer { background: #f3f4f6; border-top: 1px solid #e5e7eb; padding: 14px 20px; font-size: 13px; color: #374151; }
-    .footer { padding: 12px 20px; color: #6b7280; font-size: 12px; }
+    .summary-block { background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px 20px; font-size:12px; color:#374151; }
+    .footer { padding: 10px 20px 16px 20px; font-size: 12px; color: #6b7280; }
   </style>
 </head>
 <body>
+  <div class="preheader">今日 AI 科研与产业风向速览：精选 {{ selected_count }} 条，覆盖模型、论文、Agent、开源与产业动态。</div>
   <div class="container">
     <div class="hero">
-      <h1>AI Research &amp; Industry Digest - {{ digest.date }}</h1>
-      <div class="meta">Topic: {{ digest.topic }} | Date: {{ digest.date }}</div>
-      <div class="stats">
-        Selected News Count: {{ selected_count }} | Appendix Count: {{ digest.appendix | length }}
+      <h1>AI Research &amp; Industry Digest</h1>
+      <p>AI 科研最新进展 + 技术/产业风向日报</p>
+      <div class="hero-meta">Topic: {{ digest.topic }} | Date: {{ digest.date }} | Selected: {{ selected_count }} | Appendix: {{ digest.appendix | length }}</div>
+    </div>
+
+    <div class="section">
+      <h2>Today's Brief</h2>
+      <div class="brief">
+        <ul>
+          {% set ns = namespace(count=0) %}
+          {% for group in digest.main_digest %}
+            {% for item in group.items %}
+              {% if ns.count < 3 %}
+                <li>{{ item.title }}</li>
+                {% set ns.count = ns.count + 1 %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          {% if ns.count == 0 %}
+            <li>No highlighted items.</li>
+          {% endif %}
+        </ul>
       </div>
     </div>
 
     <div class="section">
+      <h2>Must-read Top 3</h2>
+      {% set top = namespace(count=0) %}
+      {% for group in digest.main_digest %}
+        {% for item in group.items %}
+          {% if top.count < 3 %}
+          <div class="card must-read">
+            <h3 class="title">{{ item.title }}</h3>
+            {% if item.tags %}
+            <div class="tags">{% for tag in item.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+            {% endif %}
+            {% if item.summary %}<div class="line"><strong>Summary:</strong> {{ item.summary }}</div>{% endif %}
+            {% if item.why_it_matters %}<div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters }}</div>{% endif %}
+            {% if item.insights %}<div class="line"><strong>Trend Insight:</strong> {{ item.insights }}</div>{% endif %}
+            <div class="line"><strong>Sources:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
+            <div class="line links"><strong>Links:</strong>
+              {% if item.links %}
+                {% for link in item.links %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">Source {{ loop.index }}</a>{% endfor %}
+              {% else %}
+                No link available
+              {% endif %}
+            </div>
+          </div>
+          {% set top.count = top.count + 1 %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      {% if top.count == 0 %}<div class="line">No must-read items.</div>{% endif %}
+    </div>
+
+    <div class="section">
+      <h2>Main Digest by Category</h2>
       {% for group in digest.main_digest %}
       {% if group.items %}
-      <h2>{{ group.category_name }}</h2>
+      <div class="category">
+        <h3 class="category-title">{{ group.category_name }}</h3>
         {% for item in group.items %}
         <div class="card">
-          <h3 class="title">{{ item.title }}</h3>
-
-          <div class="tags">
-            {% if item.tags %}
-              {% for tag in item.tags %}
-              <span class="tag">{{ tag }}</span>
-              {% endfor %}
+          <h4 class="title">{{ item.title }}</h4>
+          {% if item.tags %}
+          <div class="tags">{% for tag in item.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>
+          {% endif %}
+          {% if item.summary %}<div class="line"><strong>Summary:</strong> {{ item.summary }}</div>{% endif %}
+          {% if item.why_it_matters %}<div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters }}</div>{% endif %}
+          {% if item.insights %}<div class="line"><strong>Trend Insight:</strong> {{ item.insights }}</div>{% endif %}
+          <div class="line"><strong>Sources:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
+          <div class="line links"><strong>Links:</strong>
+            {% if item.links %}
+              {% for link in item.links %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">Source {{ loop.index }}</a>{% endfor %}
+            {% else %}
+              No link available
             {% endif %}
           </div>
-
-          {% if item.summary %}<div class="line"><strong>Summary:</strong> {{ item.summary }}</div>{% else %}<div class="line"><strong>Summary:</strong> N/A</div>{% endif %}
-          {% if item.why_it_matters %}<div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters }}</div>{% else %}<div class="line"><strong>Why It Matters:</strong> N/A</div>{% endif %}
-          {% if item.insights %}<div class="line"><strong>Trend Insight:</strong> {{ item.insights }}</div>{% else %}<div class="line"><strong>Trend Insight:</strong> N/A</div>{% endif %}
-          <div class="line"><strong>Source:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
-
-          <div class="line"><strong>Links:</strong></div>
-          <ul>
-            {% if item.links %}
-              {% for link in item.links %}
-              <li><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link }}</a></li>
-              {% endfor %}
-            {% else %}
-              <li>No link available</li>
-            {% endif %}
-          </ul>
         </div>
         {% endfor %}
+      </div>
       {% endif %}
       {% endfor %}
+    </div>
 
+    <div class="section">
       <h2>Appendix</h2>
       {% if digest.appendix %}
         {% for item in digest.appendix %}
         <div class="appendix-item">
           <div><strong>{{ item.title }}</strong></div>
-          <div>
+          <div class="line">Source: {{ item.source if item.source else 'N/A' }}</div>
+          {% if item.brief_summary %}<div class="line">{{ item.brief_summary }}</div>{% endif %}
+          <div class="line links">
             {% if item.link %}
-            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.link }}</a>
+            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">Read source</a>
             {% else %}
             No link available
             {% endif %}
           </div>
-          <div>Source: {{ item.source if item.source else 'N/A' }}</div>
-          <div>{{ item.brief_summary if item.brief_summary else 'N/A' }}</div>
         </div>
         {% endfor %}
       {% else %}
-        <div class="line">No appendix items.</div>
+      <div class="line">No appendix items.</div>
       {% endif %}
     </div>
 
-    <div class="stats-footer">
-      <div><strong>Source Statistics</strong></div>
-      <div>total_candidates: {{ digest.source_statistics.total_candidates }}</div>
-      <div>cleaned_candidates: {{ digest.source_statistics.cleaned_candidates }}</div>
-      <div>selected_items: {{ digest.source_statistics.selected_items }}</div>
-      <div>source_count: {{ digest.source_statistics.source_count }}</div>
-      <div>international_count: {{ digest.source_statistics.international_count if digest.source_statistics.international_count is not none else 'N/A' }}</div>
-      <div>chinese_count: {{ digest.source_statistics.chinese_count if digest.source_statistics.chinese_count is not none else 'N/A' }}</div>
+    <div class="summary-block">
+      <div><strong>Run Summary / Source Coverage</strong></div>
+      <div>raw_candidates: {{ digest.source_statistics.raw_candidates if digest.source_statistics.raw_candidates is not none else 'N/A' }}</div>
+      <div>cleaned_candidates: {{ digest.source_statistics.cleaned_candidates if digest.source_statistics.cleaned_candidates is not none else 'N/A' }}</div>
+      <div>dedup_candidates: {{ digest.source_statistics.dedup_candidates if digest.source_statistics.dedup_candidates is not none else 'N/A' }}</div>
+      <div>event_clusters: {{ digest.source_statistics.event_clusters if digest.source_statistics.event_clusters is not none else 'N/A' }}</div>
+      <div>final_llm_events: {{ digest.source_statistics.final_llm_events if digest.source_statistics.final_llm_events is not none else 'N/A' }}</div>
+      <div>selected_items: {{ digest.source_statistics.selected_items if digest.source_statistics.selected_items is not none else 'N/A' }}</div>
+      <div>appendix_items: {{ digest.source_statistics.appendix_items if digest.source_statistics.appendix_items is not none else 'N/A' }}</div>
+      <div>selected_research_count: {{ digest.source_statistics.selected_research_count if digest.source_statistics.selected_research_count is not none else 'N/A' }}</div>
+      <div>appendix_research_count: {{ digest.source_statistics.appendix_research_count if digest.source_statistics.appendix_research_count is not none else 'N/A' }}</div>
+      <div>research_quota_met: {{ digest.source_statistics.research_quota_met if digest.source_statistics.research_quota_met is not none else 'N/A' }}</div>
+      <div>research_shortage_reason: {{ digest.source_statistics.research_shortage_reason if digest.source_statistics.research_shortage_reason else 'N/A' }}</div>
+      <div>selected_international_count: {{ digest.source_statistics.selected_international_count if digest.source_statistics.selected_international_count is not none else 'N/A' }}</div>
+      <div>selected_chinese_count: {{ digest.source_statistics.selected_chinese_count if digest.source_statistics.selected_chinese_count is not none else 'N/A' }}</div>
+      <div>source_count: {{ digest.source_statistics.source_count if digest.source_statistics.source_count is not none else 'N/A' }}</div>
     </div>
 
-    <div class="footer">Generated by ai-news-digest-agent</div>
+    <div class="footer">
+      Generated by ai-news-digest-agent. 内容由公开来源与 LLM 辅助生成，请以原文为准。
+    </div>
   </div>
 </body>
 </html>

@@ -59,3 +59,41 @@
 1) 为 email sender 返回结构化结果，而不是仅抛异常或 print；
 2) pipeline 返回 `pipeline_summary/source_health_path/email_result`；
 3) Streamlit 页面统一显示运行状态、错误详情与可下载产物。
+
+# Digest Quality Convergence and Selection Policy Prompt Summary
+
+本次优化目标：把日报从“信息堆叠”收敛为“少而精”的 AI 科研与产业风向简报。
+核心策略：
+1) 正文与附录数量上限配置化；
+2) 最终正文按 international/chinese 约 70/30 做比例控制；
+3) 低价值内容降级或剔除；
+4) appendix 与正文严格去重；
+5) prompt 强化事件级分析与质量优先；
+6) 增加可观察性统计字段用于回归调优。
+
+# Zhipu Multi-stage LLM Configuration Prompt Summary
+
+本次调整目标：在不引入新 SDK 的前提下，让 preprocess/final/repair 三个阶段可配置不同智谱模型与可选不同 API key，同时保持单 key 兼容。
+
+关键决策：
+1) 统一沿用 OpenAI-compatible client；
+2) 增加 stage-aware model/key 解析与 fallback；
+3) 保留 single 模式兼容旧流程；
+4) repair 失败回退本地逻辑，final 失败明确报错。
+
+# Report Display Quality and Appendix Cleanup Prompt
+
+本次 prompt 目标：在不破坏现有 pipeline 的前提下，清理附录中的内部筛选痕迹，过滤明显无关内容，收紧事件聚类误合并，并将 HTML 报告优化为更专业的 newsletter 呈现。
+
+# Research Coverage Recovery Prompt
+
+本次 prompt 目标：修复日报中科研论文内容缺失问题，通过 research quota、arXiv query expansion、cache fallback 和 research 指标增强，确保“AI 科研 + 产业风向”定位稳定生效。
+# Final Quality Closure Prompt Summary
+
+本轮目标：修复“科研保底失败、中文占比偏高、appendix 噪声、topic 相关性不足”。核心策略：在候选、事件、最终后处理三层强约束 research quota，并对 reasoning/long-context/memory 主题做查询扩展与相关性硬过滤。
+# Stability Closure Prompt Summary
+
+本次收口目标：解决最终正文仅 5 条、research quota 失效、统计口径不一致和 appendix 噪声问题。核心方案是“先选后裁再回填”、研究保底硬约束、region ratio 非删空化、以及统计字段统一。
+# Final Small Stability Adjustment Prompt Summary
+
+本次仅做两项小修：放宽 Appendix 到 5-10 条高质量补充（仍保持硬过滤），以及 final LLM 在 `glm-4.7-flash` 连续 2 次临时失败后自动回退到 `glm-4-flash-250414`。

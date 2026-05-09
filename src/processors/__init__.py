@@ -17,6 +17,7 @@ from src.processors.deduplicator import (
     trim_candidates,
 )
 from src.processors.event_clusterer import cluster_candidates_into_events, limit_clusters
+from src.processors.digest_quality import enforce_digest_quality_policy
 
 try:
     from src.processors.llm_client import LLMClient
@@ -39,6 +40,7 @@ __all__ = [
     'save_digest',
     'cluster_candidates_into_events',
     'limit_clusters',
+    'enforce_digest_quality_policy',
 ]
 
 if LLMClient is not None:

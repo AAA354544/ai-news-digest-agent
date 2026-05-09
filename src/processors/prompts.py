@@ -67,8 +67,20 @@ def build_digest_system_prompt() -> str:
         'links 必须来自输入链接。'
         'appendix 每条必须是 {title, link, source, brief_summary}。'
         '不要使用 appendix 的 url/links/source_name/source_names/summary 字段名。'
+        'appendix.brief_summary 只能描述事件本身，不能解释筛选或降级原因。'
+        '不要出现“降级至附录/弱相关/与AI无关/避免重复/debug/dropped/filtered”等内部决策措辞。'
+        '与 AI 主题无关的内容应直接丢弃，不要输出到 appendix。'
         'appendix 不能与 main_digest 重复链接。'
         '正文不应被单一来源主导；HN 不应主导；论文类原则上不超过约 40%。'
+        '这是 AI Research & Industry Digest，不是工具新闻列表。'
+        '如果输入包含 arXiv/Semantic Scholar/research 候选，正文至少保留 3 条研究内容。'
+        '不要让 GitHub Trending、HN 或中文产业稿挤掉论文与科研进展。'
+        '针对主题应强约束相关性：弱相关工具、融资、硬件小新闻优先放 appendix。'
+        '中文输出中不要产生未转义英文双引号，概念引用优先使用「」。'
+        '正文必须输出 10-15 条，目标约 12 条；候选充足时不要只输出 5 条。'
+        '正文整体应尽量保持 international:chinese 约 70:30（允许小幅波动）。'
+        '中文来源用于补充中国 AI 生态，不应支配整份日报。'
+        '弱相关、营销稿、职业焦虑、泛生活内容应降级到 appendix 或剔除。'
         'source_statistics.selected_items 必须等于 main_digest 实际条目总数。'
     )
 
@@ -110,10 +122,15 @@ def build_digest_user_prompt(
         f'stats_context: {json.dumps(stats_context or {}, ensure_ascii=False)}\n\n'
         '当前输入是候选新闻列表。请尽量识别同一事件并合并，不要重复写同一事件。\n'
         '正文精选规则：\n'
-        '- N>=15 时精选 10-12 条；\n'
-        '- 8<=N<=14 时精选 6-8 条；\n'
-        '- N<8 时最多 N 条。\n'
+        '- 必须输出 10-15 条，目标 12 条；\n'
+        '- 若候选不足，不要用低价值内容凑数。\n'
+        '正文目标来源比例：international 约 70%，chinese 约 30%。\n'
         'appendix 保留未进正文但有价值的候选，最多 appendix_max_items 条。\n'
+        '普通融资、普通硬件小新闻、营销稿、职业焦虑、泛生活内容优先放 appendix。\n'
+        '正文结构建议：2-3 条 research/paper/benchmark/method，3-5 条 agent/tool use/memory/workflow，2-3 条产业/基础设施，其余高价值补充。\n'
+        '如果存在研究候选，正文中“论文与科研进展/技术与模型进展”应至少包含 3 条研究内容。\n'
+        '对于当前 topic，优先 reasoning/long context/memory/RAG/tool use/planning/context compression 相关事件。\n'
+        'appendix 的 brief_summary 只写事件内容，不要写“为什么被降级”。\n'
         '返回严格 JSON，不要任何额外文本。\n'
         f'分类建议：{categories}\n'
         f'JSON 骨架：\n{json.dumps(skeleton, ensure_ascii=False, indent=2)}\n\n'
@@ -166,7 +183,11 @@ def build_digest_user_prompt_from_clusters(
         '请按事件写日报，不要把同一事件拆成多条。\n'
         '每条正文可包含多个 links 和多个 source_names。\n'
         'summary 写事件事实；why_it_matters 写重要性；insights 写趋势判断和启示。\n'
+        '正文应保持 10-15 条（目标约 12 条）并保持 international:chinese 约 70:30。\n'
+        '若输入含 research clusters（如 arXiv/Semantic Scholar），正文至少保留 3 条研究类事件。\n'
+        '弱相关、营销稿、职业焦虑、泛生活内容不要进入正文。\n'
         '附录保留未入正文但值得关注的事件，不要重复正文链接。\n'
+        'appendix brief_summary 只描述事件本身，不得包含内部筛选理由。\n'
         '返回严格 JSON，不要任何额外文本。\n'
         f'分类建议：{categories}\n'
         f'JSON 骨架：\n{json.dumps(skeleton, ensure_ascii=False, indent=2)}\n\n'
@@ -184,3 +205,21 @@ def extract_json_text(response_text: str) -> str:
             lines = lines[:-1]
         return '\n'.join(lines).strip()
     return text
+
+
+def build_json_repair_prompts(broken_json_text: str) -> tuple[str, str]:
+    system_prompt = (
+        '你是 JSON 修复助手。'
+        '任务是把输入修复为 RFC 8259 合法 JSON。'
+        '只输出 JSON，不要 Markdown，不要代码块，不要解释。'
+        '不要改变业务语义；仅修复语法问题。'
+        '可修复字段名引号、中文引号、单引号、尾逗号、缺失引号等格式错误。'
+        '除非为满足结构最低合法性，不要新增内容。'
+    )
+    user_prompt = (
+        '请修复下面文本为严格合法 JSON。'
+        '必须使用双引号作为 key 和字符串引号。'
+        '不要输出任何 JSON 之外的内容。\n\n'
+        f'{broken_json_text or ""}'
+    )
+    return system_prompt, user_prompt

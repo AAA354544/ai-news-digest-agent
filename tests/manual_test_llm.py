@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.config import load_app_config
 from src.models import CandidateNews
 from src.processors.analyzer import analyze_candidates_with_llm, save_digest
+from src.processors.llm_client import LLMClient
 
 
 def _find_latest_cleaned_file(cleaned_dir: Path) -> Path | None:
@@ -61,6 +62,14 @@ def main() -> None:
     print(f"using candidates for LLM test: {len(limited)}")
     print(f"llm provider: {cfg.llm_provider}")
     print(f"zhipu model: {cfg.zhipu_model}")
+    print(f"llm pipeline mode: {cfg.llm_pipeline_mode}")
+    try:
+        client = LLMClient(config=cfg)
+        for stage in ("preprocess", "final", "repair"):
+            info = client.stage_info(stage)  # type: ignore[arg-type]
+            print(f"{stage} stage -> provider={info['provider']}, model={info['model']}")
+    except Exception as exc:
+        print(f"llm stage info unavailable: {exc}")
     print(f"topic: {cfg.digest_topic}")
 
     digest = analyze_candidates_with_llm(limited, config=cfg)

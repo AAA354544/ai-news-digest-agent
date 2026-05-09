@@ -15,6 +15,7 @@ from src.processors.prompts import (
     build_digest_user_prompt_from_clusters,
     extract_json_text,
 )
+from src.processors.digest_quality import enforce_digest_quality_policy
 
 
 def _extract_json_core(text: str) -> str:
@@ -39,13 +40,51 @@ def _remove_trailing_commas(text: str) -> str:
     return re.sub(r',\s*([}\]])', r'\1', text)
 
 
-def parse_llm_json_safely(json_text: str) -> dict:
+def local_repair_json_text(text: str) -> str:
+    fixed = (text or '')
+    # Remove BOM and other invisible chars that often break parsing.
+    fixed = fixed.replace('\ufeff', '').replace('\u200b', '').replace('\u200c', '').replace('\u200d', '')
+    fixed = fixed.replace('\xa0', ' ')
+    fixed = fixed.strip()
+    fixed = extract_json_text(fixed)
+    fixed = _extract_json_core(fixed)
+
+    # Normalize Chinese quotes and smart quotes.
+    fixed = fixed.replace('“', '"').replace('”', '"').replace('‘', "'").replace('’', "'")
+
+    # Quote missing leading quote before key: links": -> "links":
+    fixed = re.sub(
+        r'(?m)^(\s*)([A-Za-z_][A-Za-z0-9_]*)"\s*:',
+        lambda m: f'{m.group(1)}"{m.group(2)}":',
+        fixed,
+    )
+
+    # Quote unquoted keys: links: -> "links":
+    fixed = re.sub(
+        r'([{\[,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:',
+        lambda m: f'{m.group(1)}"{m.group(2)}":',
+        fixed,
+    )
+    fixed = re.sub(
+        r'(?m)^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:',
+        lambda m: f'{m.group(1)}"{m.group(2)}":',
+        fixed,
+    )
+
+    # Single-quoted key/value pairs to JSON-style double quotes.
+    fixed = re.sub(r"(?m)'([A-Za-z_][A-Za-z0-9_]*)'\s*:", r'"\1":', fixed)
+    fixed = re.sub(r':\s*\'([^\'\\]*(?:\\.[^\'\\]*)*)\'', r': "\1"', fixed)
+
+    fixed = _remove_trailing_commas(fixed)
+    return fixed
+
+
+def parse_llm_json_safely(json_text: str, config: AppConfig | None = None) -> dict:
     digest_date = date.today().isoformat()
     debug_dir = Path('data/digested')
     debug_dir.mkdir(parents=True, exist_ok=True)
 
-    cleaned = _extract_json_core((json_text or '').strip())
-    cleaned = _remove_trailing_commas(cleaned)
+    cleaned = local_repair_json_text(json_text)
 
     try:
         payload = json.loads(cleaned)
@@ -55,25 +94,16 @@ def parse_llm_json_safely(json_text: str) -> dict:
     except Exception as exc:
         failed_path = debug_dir / f'{digest_date}_llm_json_parse_failed.txt'
         failed_path.write_text(json_text or '', encoding='utf-8')
+        local_repaired_path = debug_dir / f'{digest_date}_llm_local_repaired_text.txt'
+        local_repaired_path.write_text(cleaned or '', encoding='utf-8')
         print(f'[analyzer] json parse failed, raw json text saved: {failed_path}')
         print(f'[analyzer] parse error: {exc}')
 
         try:
-            cleaned2 = _remove_trailing_commas(_extract_json_core(json_text or ''))
-            payload = json.loads(cleaned2)
-            if not isinstance(payload, dict):
-                raise ValueError('Locally repaired JSON is not an object.')
-            repaired_path = debug_dir / f'{digest_date}_llm_repaired_response.json'
-            repaired_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
-            return payload
-        except Exception:
-            pass
-
-        try:
             from json_repair import repair_json
 
-            repaired = repair_json(json_text or '')
-            repaired_core = _remove_trailing_commas(_extract_json_core(repaired))
+            repaired = repair_json(cleaned or json_text or '')
+            repaired_core = local_repair_json_text(repaired)
             payload = json.loads(repaired_core)
             if not isinstance(payload, dict):
                 raise ValueError('Repaired JSON is not an object.')
@@ -81,10 +111,37 @@ def parse_llm_json_safely(json_text: str) -> dict:
             repaired_path = debug_dir / f'{digest_date}_llm_repaired_response.json'
             repaired_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
             return payload
-        except Exception as repair_exc:
-            raise RuntimeError(
-                f'Failed to parse LLM JSON even after repair. Please inspect debug file: {failed_path}'
-            ) from repair_exc
+        except Exception:
+            pass
+
+        # Optional LLM repair layer with safe fallback.
+        cfg = config or load_app_config()
+        if cfg.llm_repair_enabled:
+            try:
+                from src.processors.llm_client import LLMClient
+                from src.processors.prompts import build_json_repair_prompts
+
+                client = LLMClient(config=cfg)
+                repair_system, repair_user = build_json_repair_prompts(cleaned or json_text or '')
+                repaired_text = client.chat_json(repair_system, repair_user, stage='repair')
+                repair_raw_path = debug_dir / f'{digest_date}_llm_repair_raw_response.txt'
+                repair_raw_path.write_text(repaired_text or '', encoding='utf-8')
+                repaired_core = local_repair_json_text(repaired_text)
+                payload = json.loads(repaired_core)
+                if not isinstance(payload, dict):
+                    raise ValueError('LLM repaired JSON is not an object.')
+                repaired_path = debug_dir / f'{digest_date}_llm_repaired_response.json'
+                repaired_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+                return payload
+            except Exception as repair_exc:
+                raise RuntimeError(
+                    f'Failed to parse LLM JSON even after repair. '
+                    f'Please inspect: {failed_path}, {local_repaired_path}'
+                ) from repair_exc
+
+        raise RuntimeError(
+            f'Failed to parse LLM JSON. Please inspect: {failed_path}, {local_repaired_path}'
+        )
 
 
 def normalize_digest_payload(payload: dict) -> dict:
@@ -95,6 +152,7 @@ def normalize_digest_payload(payload: dict) -> dict:
         payload['source_statistics'] = {
             'total_candidates': 0,
             'cleaned_candidates': 0,
+            'dedup_candidates': 0,
             'selected_items': 0,
             'source_count': 0,
             'international_count': 0,
@@ -104,7 +162,27 @@ def normalize_digest_payload(payload: dict) -> dict:
             'event_clusters': 0,
             'final_llm_events': 0,
             'appendix_items': 0,
+            'raw_research_candidates': 0,
+            'cleaned_research_candidates': 0,
+            'research_event_clusters': 0,
+            'selected_research_count': 0,
+            'appendix_research_count': 0,
+            'research_quota_met': False,
         }
+
+    def _clean_appendix_text(value: str) -> str:
+        text = str(value or '').strip()
+        bad_phrases = [
+            '降级至附录', '属于职业焦虑类内容', '属于泛业务实践内容', '属于泛技术实践内容', '属于泛生活内容',
+            '属于泛商业新闻', '属于弱相关内容', '与AI主题无关', '与AI无关', '避免重复', '仅AI部分相关',
+            '其余降级至附录', 'low value', 'noise', 'penalty', 'downgrade', 'dropped', 'debug',
+        ]
+        lowered = text.lower()
+        for phrase in bad_phrases:
+            if phrase.lower() in lowered:
+                text = re.sub(re.escape(phrase), '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
 
     appendix = payload.get('appendix')
     if not isinstance(appendix, list):
@@ -135,7 +213,9 @@ def normalize_digest_payload(payload: dict) -> dict:
             source = str(source_value or '').strip()
 
             brief_value = item.get('brief_summary') or item.get('summary') or item.get('description') or item.get('snippet') or ''
-            brief_summary = str(brief_value).strip()
+            brief_summary = _clean_appendix_text(brief_value)
+            if not brief_summary:
+                brief_summary = '该条目提供了与 AI 生态相关的补充背景信息。'
 
             normalized_appendix.append(
                 {'title': title, 'link': link, 'source': source, 'brief_summary': brief_summary}
@@ -249,7 +329,7 @@ def _maybe_preprocess_clusters_with_llm(clusters: list[EventCluster], config: Ap
         ]
         system_prompt = '你是事件筛选助手。输出严格 JSON。只返回 {"scores": [{"event_id":"...","score":0-1}]}。'
         user_prompt = f'请给事件打分，越值得进入主日报分数越高：{json.dumps(payload, ensure_ascii=False)}'
-        raw = client.chat_json(system_prompt=system_prompt, user_prompt=user_prompt)
+        raw = client.chat_json(system_prompt=system_prompt, user_prompt=user_prompt, stage='preprocess')
         parsed = parse_llm_json_safely(extract_json_text(raw))
         scores_raw = parsed.get('scores', [])
         score_map: dict[str, float] = {}
@@ -329,17 +409,21 @@ def analyze_candidates_with_llm(
         )
 
     client = LLMClient(config=cfg)
-    raw_response = client.chat_json(system_prompt=system_prompt, user_prompt=user_prompt)
+    raw_response = client.chat_json(system_prompt=system_prompt, user_prompt=user_prompt, stage='final')
+    merged_stats['final_model_used'] = client.last_final_model_used
+    merged_stats['final_fallback_used'] = client.last_final_fallback_used
+    merged_stats['final_fallback_reason'] = client.last_final_fallback_reason
 
     try:
         json_text = extract_json_text(raw_response)
-        payload = parse_llm_json_safely(json_text)
+        payload = parse_llm_json_safely(json_text, config=cfg)
         payload = normalize_digest_payload(payload)
         payload['topic'] = topic
         if hasattr(DailyDigest, 'model_validate'):
             digest = DailyDigest.model_validate(payload)
         else:
             digest = DailyDigest(**payload)
+        digest, quality_metrics = enforce_digest_quality_policy(digest=digest, cfg=cfg, candidates=candidates)
         digest = finalize_digest_statistics(
             digest,
             raw_candidates=merged_stats.get('raw_candidates'),
@@ -353,6 +437,30 @@ def analyze_candidates_with_llm(
             'international_count', digest.source_statistics.international_count
         )
         digest.source_statistics.chinese_count = merged_stats.get('chinese_count', digest.source_statistics.chinese_count)
+        digest.source_statistics.selected_international_count = quality_metrics.get('selected_international_count')
+        digest.source_statistics.selected_chinese_count = quality_metrics.get('selected_chinese_count')
+        digest.source_statistics.appendix_count = quality_metrics.get('appendix_count')
+        digest.source_statistics.dropped_low_value_count = quality_metrics.get('dropped_low_value_count')
+        digest.source_statistics.duplicate_removed_from_appendix_count = quality_metrics.get(
+            'duplicate_removed_from_appendix_count'
+        )
+        digest.source_statistics.raw_research_candidates = merged_stats.get('raw_research_candidates')
+        digest.source_statistics.cleaned_research_candidates = merged_stats.get('cleaned_research_candidates')
+        digest.source_statistics.research_event_clusters = merged_stats.get('research_event_clusters')
+        digest.source_statistics.dedup_candidates = merged_stats.get('dedup_candidates')
+        digest.source_statistics.selected_research_count = quality_metrics.get('selected_research_count')
+        digest.source_statistics.appendix_research_count = quality_metrics.get('appendix_research_count')
+        digest.source_statistics.research_quota_met = quality_metrics.get('research_quota_met')
+        digest.source_statistics.research_shortage_reason = quality_metrics.get('research_shortage_reason')
+        digest.source_statistics.shortage_reason = quality_metrics.get('shortage_reason')
+        digest.source_statistics.ratio_fallback_reason = quality_metrics.get('ratio_fallback_reason')
+        digest.source_statistics.appendix_shortage_reason = quality_metrics.get('appendix_shortage_reason')
+        digest.source_statistics.arxiv_status = merged_stats.get('arxiv_status')
+        digest.source_statistics.semantic_scholar_status = merged_stats.get('semantic_scholar_status')
+        digest.source_statistics.total_source_count = digest.source_statistics.source_count
+        digest.source_statistics.final_model_used = merged_stats.get('final_model_used')
+        digest.source_statistics.final_fallback_used = merged_stats.get('final_fallback_used')
+        digest.source_statistics.final_fallback_reason = merged_stats.get('final_fallback_reason')
         return digest
     except Exception as exc:
         debug_dir = Path('data/digested')

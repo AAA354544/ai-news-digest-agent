@@ -97,6 +97,34 @@
     keywords: ["cs.AI", "cs.CL", "cs.LG"]
     notes: "Stable API endpoint with polite pacing."
 
+  - name: Semantic Scholar Papers
+    type: semantic_scholar
+    region: international
+    language: en
+    category: research
+    content_type: research
+    priority: 8
+    url_or_endpoint: "https://api.semanticscholar.org/graph/v1/paper/search"
+    max_items: 16
+    enabled: true
+    tags: ["semantic scholar", "paper"]
+    keywords: ["agent", "tool use", "memory", "workflow", "rag"]
+    notes: "Public API fallback for research papers when arXiv is limited."
+
+  - name: Papers with Code Trending
+    type: rss_or_web
+    region: international
+    language: en
+    category: research
+    content_type: research
+    priority: 6
+    url_or_endpoint: "TODO"
+    max_items: 12
+    enabled: false
+    tags: ["papers with code", "research"]
+    keywords: ["paper", "code implementation"]
+    notes: "TODO: verify stable public feed/API endpoint."
+
   - name: GitHub Trending AI
     type: github_trending
     region: international

@@ -18,6 +18,7 @@ from src.fetchers.base import BaseFetcher
 from src.fetchers.github_trending_fetcher import GitHubTrendingFetcher
 from src.fetchers.hn_fetcher import HackerNewsFetcher
 from src.fetchers.rss_fetcher import RSSFetcher
+from src.fetchers.semantic_scholar_fetcher import SemanticScholarFetcher
 from src.fetchers.web_extractor import extract_text_from_url
 from src.models import CandidateNews
 from src.utils.http_utils import is_placeholder_url
@@ -35,6 +36,8 @@ def build_fetcher(source: dict[str, Any]) -> BaseFetcher | None:
         return ArxivFetcher(source)
     if source_type == 'github_trending':
         return GitHubTrendingFetcher(source)
+    if source_type == 'semantic_scholar':
+        return SemanticScholarFetcher(source)
     return None
 
 
@@ -91,6 +94,10 @@ def main() -> None:
         health_records.append({'name': source_name, 'type': source_type, 'enabled': True, 'status': status, 'count': count, 'note': note})
 
     print(f'total candidates: {len(all_candidates)}')
+    arxiv_status = next((x.get('status') for x in health_records if 'arxiv' in str(x.get('name', '')).lower()), 'N/A')
+    sem_status = next((x.get('status') for x in health_records if 'semantic scholar' in str(x.get('name', '')).lower()), 'N/A')
+    print(f'arxiv status: {arxiv_status}')
+    print(f'semantic_scholar status: {sem_status}')
 
     if all_candidates:
         dist = Counter(item.source_type for item in all_candidates)
@@ -102,6 +109,10 @@ def main() -> None:
         print('region distribution:')
         for k in sorted(region_dist.keys()):
             print(f'  {k}: {region_dist[k]}')
+
+        research_sources = {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'}
+        research_count = sum(1 for x in all_candidates if x.source_type in research_sources or (x.category_hint or '').lower() in {'academic_paper', 'research'})
+        print(f'research candidates: {research_count}')
 
         print('top 5 candidates:')
         for idx, item in enumerate(all_candidates[:5], start=1):

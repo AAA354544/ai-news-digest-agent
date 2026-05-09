@@ -9,13 +9,23 @@
 
 main_digest_policy:
   max_research_ratio: 0.4
+  enable_research_quota: true
+  research_min_main_items: 3
+  research_target_ratio: 0.25
+  research_max_main_items: 5
   positioning: "AI research progress plus AI industry and technology trend digest"
+  main_digest_target_items: 12
+  main_digest_max_items: 15
+  appendix_target_items: 8
+  appendix_min_items: 5
+  appendix_max_items: 10
+  target_international_ratio: 0.7
+  target_chinese_ratio: 0.3
   preferred_categories:
     - 技术与模型进展
-    - 科研与论文前沿
+    - 论文与科研进展
     - Agent 与 AI 工具
-    - 产业与公司动态
     - 开源生态与开发者趋势
+    - 产业与公司动态
     - 算力、芯片与基础设施
-    - 安全、政策与监管
-    - 其他
+    - 政策、安全与治理

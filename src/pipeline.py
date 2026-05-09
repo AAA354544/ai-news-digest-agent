@@ -13,6 +13,46 @@ from src.utils.http_utils import is_placeholder_url
 from src.utils.source_health import save_source_health
 
 
+def _is_research_candidate(candidate: CandidateNews) -> bool:
+    if candidate.source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'}:
+        return True
+    category = (candidate.category_hint or '').lower()
+    if category in {'academic_paper', 'research'}:
+        return True
+    text = f"{candidate.title} {candidate.summary_or_snippet or ''}".lower()
+    return any(k in text for k in ('paper', 'arxiv', 'benchmark', 'research', 'doi', 'agent memory', 'tool use'))
+
+
+def _is_research_cluster(cluster: EventCluster) -> bool:
+    if any(x in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'} for x in cluster.source_types):
+        return True
+    category = (cluster.category_hint or '').lower()
+    if category in {'academic_paper', 'research'}:
+        return True
+    title = (cluster.representative_title or '').lower()
+    return any(k in title for k in ('paper', 'arxiv', 'benchmark', 'agent memory', 'tool use'))
+
+
+def _select_final_clusters_with_research_quota(clusters: list[EventCluster], max_events: int) -> list[EventCluster]:
+    if not clusters or max_events <= 0:
+        return []
+    research = [c for c in clusters if _is_research_cluster(c)]
+    non_research = [c for c in clusters if not _is_research_cluster(c)]
+    research_target = min(len(research), min(12, max(8, round(max_events * 0.25)))) if max_events >= 30 else min(len(research), 3)
+    selected: list[EventCluster] = []
+    selected.extend(research[:research_target])
+    for c in non_research:
+        if len(selected) >= max_events:
+            break
+        selected.append(c)
+    if len(selected) < max_events:
+        for c in research[research_target:]:
+            if len(selected) >= max_events:
+                break
+            selected.append(c)
+    return selected[:max_events]
+
+
 def _find_latest_file(input_dir: str, pattern: str) -> Path:
     base = Path(input_dir)
     files = sorted(base.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -62,6 +102,10 @@ def _build_fetcher(source: dict[str, Any]) -> BaseFetcher | None:
         from src.fetchers.arxiv_fetcher import ArxivFetcher
 
         return ArxivFetcher(source)
+    if source_type == "semantic_scholar":
+        from src.fetchers.semantic_scholar_fetcher import SemanticScholarFetcher
+
+        return SemanticScholarFetcher(source)
     if source_type == "github_trending":
         from src.fetchers.github_trending_fetcher import GitHubTrendingFetcher
 
@@ -186,6 +230,15 @@ def run_clean_step(topic_override: str | None = None) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{date.today().isoformat()}_cleaned_candidates.json"
     out_path.write_text(json.dumps(_to_json_compatible(final_candidates), ensure_ascii=False, indent=2), encoding="utf-8")
+    stats_path = out_dir / f"{date.today().isoformat()}_cleaning_stats.json"
+    stats_payload = {
+        "raw_candidates": len(raw_candidates),
+        "cleaned_candidates": len(cleaned_only),
+        "dedup_candidates": len(deduped_only),
+        "cluster_input_candidates": len(cluster_input),
+        "final_llm_candidates": len(final_candidates),
+    }
+    stats_path.write_text(json.dumps(stats_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return out_path
 
 
@@ -228,26 +281,54 @@ def run_analyze_step(limit_for_test: int | None = None, topic_override: str | No
 
     max_events = limit_for_test if limit_for_test is not None else cfg.max_llm_events
     max_events = max(1, max_events)
-    final_clusters = limit_clusters(clusters, max_events=max_events)
+    final_clusters = _select_final_clusters_with_research_quota(clusters, max_events=max_events)
     _save_clusters(final_clusters)
 
     raw_count = 0
+    raw_candidates_for_stats: list[CandidateNews] = []
     try:
         raw_path = _find_latest_file("data/raw", "*_raw_candidates.json")
-        raw_count = len(_load_candidates(raw_path))
+        raw_candidates_for_stats = _load_candidates(raw_path)
+        raw_count = len(raw_candidates_for_stats)
     except Exception:
         raw_count = len(candidates)
 
+    cleaning_stats: dict[str, int] = {}
+    try:
+        stats_file = _find_latest_file("data/cleaned", "*_cleaning_stats.json")
+        cleaning_stats = json.loads(stats_file.read_text(encoding="utf-8"))
+    except Exception:
+        cleaning_stats = {}
+
     stats_context = {
         "raw_candidates": raw_count,
-        "cleaned_candidates": len(candidates),
-        "cluster_input_candidates": len(cluster_input_candidates),
+        "cleaned_candidates": int(cleaning_stats.get("cleaned_candidates", len(candidates))),
+        "dedup_candidates": int(cleaning_stats.get("dedup_candidates", len(candidates))),
+        "cluster_input_candidates": int(cleaning_stats.get("cluster_input_candidates", len(cluster_input_candidates))),
         "event_clusters": len(clusters),
         "final_llm_events": len(final_clusters),
         "source_count": len({c.source_name for c in candidates}),
         "international_count": sum(1 for c in candidates if c.region.lower() == "international"),
         "chinese_count": sum(1 for c in candidates if c.region.lower() in {"chinese", "china", "zh"}),
+        "raw_research_candidates": sum(1 for c in raw_candidates_for_stats if _is_research_candidate(c)),
+        "cleaned_research_candidates": sum(1 for c in candidates if _is_research_candidate(c)),
+        "research_event_clusters": sum(1 for c in clusters if _is_research_cluster(c)),
     }
+
+    try:
+        health_path = _find_latest_file("data/raw", "*_source_health.json")
+        health_payload = json.loads(health_path.read_text(encoding='utf-8'))
+        if isinstance(health_payload, list):
+            for row in health_payload:
+                if not isinstance(row, dict):
+                    continue
+                name = str(row.get('name', '')).lower()
+                if 'arxiv' in name:
+                    stats_context['arxiv_status'] = row.get('status')
+                if 'semantic scholar' in name:
+                    stats_context['semantic_scholar_status'] = row.get('status')
+    except Exception:
+        pass
 
     try:
         digest: DailyDigest = analyze_candidates_with_llm(
@@ -328,15 +409,37 @@ def run_full_pipeline(
         pipeline_summary = {
             "raw_candidates": stats.get("raw_candidates"),
             "cleaned_candidates": stats.get("cleaned_candidates"),
+            "dedup_candidates": stats.get("dedup_candidates"),
             "cluster_input_candidates": stats.get("cluster_input_candidates"),
             "event_clusters": stats.get("event_clusters"),
             "final_llm_events": stats.get("final_llm_events"),
             "selected_items": stats.get("selected_items"),
             "appendix_items": stats.get("appendix_items"),
             "source_count": stats.get("source_count"),
+            "total_source_count": stats.get("total_source_count", stats.get("source_count")),
             "chinese_count": stats.get("chinese_count"),
             "international_count": stats.get("international_count"),
+            "selected_international_count": stats.get("selected_international_count"),
+            "selected_chinese_count": stats.get("selected_chinese_count"),
+            "appendix_count": stats.get("appendix_count"),
+            "dropped_low_value_count": stats.get("dropped_low_value_count"),
+            "duplicate_removed_from_appendix_count": stats.get("duplicate_removed_from_appendix_count"),
             "topic": payload.get("topic"),
+            "raw_research_candidates": stats.get("raw_research_candidates"),
+            "cleaned_research_candidates": stats.get("cleaned_research_candidates"),
+            "research_event_clusters": stats.get("research_event_clusters"),
+            "selected_research_count": stats.get("selected_research_count"),
+            "appendix_research_count": stats.get("appendix_research_count"),
+            "research_quota_met": stats.get("research_quota_met"),
+            "research_shortage_reason": stats.get("research_shortage_reason"),
+            "shortage_reason": stats.get("shortage_reason"),
+            "ratio_fallback_reason": stats.get("ratio_fallback_reason"),
+            "arxiv_status": stats.get("arxiv_status"),
+            "semantic_scholar_status": stats.get("semantic_scholar_status"),
+            "final_model_used": stats.get("final_model_used"),
+            "final_fallback_used": stats.get("final_fallback_used"),
+            "final_fallback_reason": stats.get("final_fallback_reason"),
+            "appendix_shortage_reason": stats.get("appendix_shortage_reason"),
         }
     except Exception:
         pipeline_summary = {}

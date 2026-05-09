@@ -40,6 +40,31 @@ _KEYWORDS = (
     '智能体',
 )
 
+_RESEARCH_HINTS = (
+    'arxiv',
+    'paper',
+    'research',
+    'benchmark',
+    'doi',
+    'semantic scholar',
+    'crossref',
+    'agent memory',
+    'tool use',
+    'workflow',
+    'planning',
+    'rag',
+)
+
+
+def _is_research_candidate(item: CandidateNews) -> bool:
+    if item.source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'}:
+        return True
+    category = (item.category_hint or '').lower()
+    if category in {'academic_paper', 'research'}:
+        return True
+    text = f"{item.title} {item.summary_or_snippet or ''}".lower()
+    return any(k in text for k in _RESEARCH_HINTS)
+
 
 def normalize_url(url: str) -> str:
     raw = (url or '').strip()
@@ -107,4 +132,23 @@ def prepare_llm_candidates(
         quotas=quotas,
         allow_overflow=allow_overflow,
     )
-    return trim_candidates(balanced, max_candidates=max_candidates)
+
+    # Keep a minimum research slice before final trim.
+    research_min = min(max_candidates, max(3, round(max_candidates * 0.25), 8 if max_candidates >= 30 else 3))
+    research_min = min(research_min, 12)
+    research_items = [x for x in balanced if _is_research_candidate(x)]
+    non_research_items = [x for x in balanced if not _is_research_candidate(x)]
+
+    selected: list[CandidateNews] = []
+    selected.extend(research_items[:research_min])
+    for item in non_research_items:
+        if len(selected) >= max_candidates:
+            break
+        selected.append(item)
+    if len(selected) < max_candidates:
+        for item in research_items[research_min:]:
+            if len(selected) >= max_candidates:
+                break
+            selected.append(item)
+
+    return trim_candidates(selected, max_candidates=max_candidates)

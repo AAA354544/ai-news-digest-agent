@@ -24,6 +24,10 @@ DEFAULT_DIGEST_POLICY: dict[str, Any] = {
     },
     'main_digest_policy': {
         'max_research_ratio': 0.4,
+        'enable_research_quota': True,
+        'research_min_main_items': 3,
+        'research_target_ratio': 0.25,
+        'research_max_main_items': 5,
         'positioning': 'AI research progress plus AI industry and technology trend digest',
         'preferred_categories': [
             '技术与模型进展',
@@ -48,7 +52,15 @@ class AppConfig(BaseModel):
     max_cluster_input_candidates: int = Field(default=120)
     max_llm_events: int = Field(default=50)
     appendix_max_items: int = Field(default=30)
+    appendix_min_items: int = Field(default=5)
+    appendix_target_items: int = Field(default=8)
     max_llm_candidates: int = Field(default=50)  # backward-compatible alias
+    target_international_ratio: float = Field(default=0.7)
+    target_chinese_ratio: float = Field(default=0.3)
+    enable_research_quota: bool = Field(default=True)
+    research_min_main_items: int = Field(default=3)
+    research_target_ratio: float = Field(default=0.25)
+    research_max_main_items: int = Field(default=5)
 
     main_digest_min_items: int = Field(default=10)
     main_digest_max_items: int = Field(default=15)
@@ -60,14 +72,21 @@ class AppConfig(BaseModel):
     llm_preprocess_model: str = Field(default='')
     llm_final_provider: str = Field(default='zhipu')
     llm_final_model: str = Field(default='')
+    llm_final_fallback_model: str = Field(default='glm-4-flash-250414')
+    llm_final_max_retries: int = Field(default=2)
+    llm_final_fallback_enabled: bool = Field(default=True)
     llm_repair_provider: str = Field(default='zhipu')
     llm_repair_model: str = Field(default='')
+    llm_repair_enabled: bool = Field(default=True)
 
     # provider
     llm_provider: str = Field(default='zhipu')
     zhipu_api_key: str = Field(default='')
-    zhipu_base_url: str = Field(default='https://open.bigmodel.cn/api/paas/v4/')
+    zhipu_base_url: str = Field(default='https://open.bigmodel.cn/api/paas/v4')
     zhipu_model: str = Field(default='')
+    zhipu_preprocess_api_key: str = Field(default='')
+    zhipu_final_api_key: str = Field(default='')
+    zhipu_repair_api_key: str = Field(default='')
 
     deepseek_api_key: str = Field(default='')
     deepseek_base_url: str = Field(default='')
@@ -112,8 +131,15 @@ def _env_int(name: str, default: int) -> int:
         return int(raw)
     except ValueError:
         return default
+    
 
-
+def _normalize_zhipu_base_url(raw: str | None) -> str:
+    value = (raw or '').strip() or 'https://open.bigmodel.cn/api/paas/v4'
+    for suffix in ('/chat/completions', '/chat/completions/'):
+        if value.endswith(suffix):
+            value = value[: -len(suffix)]
+            break
+    return value.rstrip('/')
 def load_app_config() -> AppConfig:
     max_llm_candidates = _env_int('MAX_LLM_CANDIDATES', 50)
     max_llm_events = _env_int('MAX_LLM_EVENTS', max_llm_candidates)
@@ -124,22 +150,37 @@ def load_app_config() -> AppConfig:
         max_raw_candidates=_env_int('MAX_RAW_CANDIDATES', 300),
         max_cluster_input_candidates=_env_int('MAX_CLUSTER_INPUT_CANDIDATES', 120),
         max_llm_events=max_llm_events,
-        appendix_max_items=_env_int('APPENDIX_MAX_ITEMS', 30),
+        appendix_max_items=_env_int('APPENDIX_MAX_ITEMS', 10),
+        appendix_min_items=_env_int('APPENDIX_MIN_ITEMS', 5),
+        appendix_target_items=_env_int('APPENDIX_TARGET_ITEMS', 8),
         max_llm_candidates=max_llm_candidates,
         main_digest_min_items=_env_int('MAIN_DIGEST_MIN_ITEMS', 10),
-        main_digest_max_items=_env_int('MAIN_DIGEST_MAX_ITEMS', 15),
+        main_digest_max_items=_env_int('MAIN_DIGEST_MAX_ITEMS', 12),
+        target_international_ratio=float(os.getenv('TARGET_INTERNATIONAL_RATIO', '0.7') or 0.7),
+        target_chinese_ratio=float(os.getenv('TARGET_CHINESE_RATIO', '0.3') or 0.3),
+        enable_research_quota=_env_bool('ENABLE_RESEARCH_QUOTA', True),
+        research_min_main_items=_env_int('RESEARCH_MIN_MAIN_ITEMS', 3),
+        research_target_ratio=float(os.getenv('RESEARCH_TARGET_RATIO', '0.25') or 0.25),
+        research_max_main_items=_env_int('RESEARCH_MAX_MAIN_ITEMS', 5),
         llm_pipeline_mode=os.getenv('LLM_PIPELINE_MODE', 'single').strip().lower(),
         llm_preprocess_enabled=_env_bool('LLM_PREPROCESS_ENABLED', False),
         llm_preprocess_provider=os.getenv('LLM_PREPROCESS_PROVIDER', 'zhipu'),
         llm_preprocess_model=os.getenv('LLM_PREPROCESS_MODEL', ''),
         llm_final_provider=os.getenv('LLM_FINAL_PROVIDER', 'zhipu'),
         llm_final_model=os.getenv('LLM_FINAL_MODEL', ''),
+        llm_final_fallback_model=os.getenv('LLM_FINAL_FALLBACK_MODEL', 'glm-4-flash-250414'),
+        llm_final_max_retries=_env_int('LLM_FINAL_MAX_RETRIES', 2),
+        llm_final_fallback_enabled=_env_bool('LLM_FINAL_FALLBACK_ENABLED', True),
         llm_repair_provider=os.getenv('LLM_REPAIR_PROVIDER', 'zhipu'),
         llm_repair_model=os.getenv('LLM_REPAIR_MODEL', ''),
+        llm_repair_enabled=_env_bool('LLM_REPAIR_ENABLED', True),
         llm_provider=os.getenv('LLM_PROVIDER', 'zhipu'),
         zhipu_api_key=os.getenv('ZHIPU_API_KEY', ''),
-        zhipu_base_url=os.getenv('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4/'),
+        zhipu_base_url=_normalize_zhipu_base_url(os.getenv('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4')),
         zhipu_model=os.getenv('ZHIPU_MODEL', ''),
+        zhipu_preprocess_api_key=os.getenv('ZHIPU_PREPROCESS_API_KEY', ''),
+        zhipu_final_api_key=os.getenv('ZHIPU_FINAL_API_KEY', ''),
+        zhipu_repair_api_key=os.getenv('ZHIPU_REPAIR_API_KEY', ''),
         deepseek_api_key=os.getenv('DEEPSEEK_API_KEY', ''),
         deepseek_base_url=os.getenv('DEEPSEEK_BASE_URL', ''),
         deepseek_model=os.getenv('DEEPSEEK_MODEL', ''),
