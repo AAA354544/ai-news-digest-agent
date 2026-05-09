@@ -12,8 +12,15 @@ class SourceConfig(BaseModel):
     region: str = 'global'
     language: str = 'en'
     category: str = 'ai'
+    content_type: str = ''
+    priority: int = 0
     url_or_endpoint: str = ''
     max_items: Optional[int] = None
+    timeout_seconds: Optional[int] = None
+    max_retries: Optional[int] = None
+    request_interval_seconds: Optional[float] = None
+    cache_ttl_seconds: Optional[int] = None
+    keywords: list[str] = Field(default_factory=list)
     enabled: bool = True
     notes: Optional[str] = None
 
