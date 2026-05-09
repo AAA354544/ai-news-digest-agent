@@ -59,6 +59,15 @@ class AppConfig(BaseModel):
     sender_email: str = Field(default='')
     smtp_auth_code: str = Field(default='')
     recipient_email: str = Field(default='')
+    recipient_emails: str = Field(default='')
+    max_recipients_per_run: int = Field(default=5)
+    send_email: bool = Field(default=False)
+    dry_run: bool = Field(default=False)
+
+    rsshub_base_url: str = Field(default='')
+    rsshub_enabled: bool = Field(default=False)
+    rsshub_timeout_seconds: int = Field(default=20)
+    rsshub_max_items_per_source: int = Field(default=20)
 
     default_send_time: str = Field(default='22:00')
     timezone: str = Field(default='Asia/Shanghai')
@@ -82,6 +91,14 @@ def load_app_config() -> AppConfig:
         sender_email=os.getenv('SENDER_EMAIL', ''),
         smtp_auth_code=os.getenv('SMTP_AUTH_CODE', ''),
         recipient_email=os.getenv('RECIPIENT_EMAIL', ''),
+        recipient_emails=os.getenv('RECIPIENT_EMAILS', ''),
+        max_recipients_per_run=int(os.getenv('MAX_RECIPIENTS_PER_RUN', '5')),
+        send_email=os.getenv('SEND_EMAIL', 'false').strip().lower() in {'1', 'true', 'yes', 'on'},
+        dry_run=os.getenv('DRY_RUN', 'false').strip().lower() in {'1', 'true', 'yes', 'on'},
+        rsshub_base_url=os.getenv('RSSHUB_BASE_URL', ''),
+        rsshub_enabled=os.getenv('RSSHUB_ENABLED', 'false').strip().lower() in {'1', 'true', 'yes', 'on'},
+        rsshub_timeout_seconds=int(os.getenv('RSSHUB_TIMEOUT_SECONDS', '20')),
+        rsshub_max_items_per_source=int(os.getenv('RSSHUB_MAX_ITEMS_PER_SOURCE', '20')),
         default_send_time=os.getenv('DEFAULT_SEND_TIME', '22:00'),
         timezone=os.getenv('TIMEZONE', 'Asia/Shanghai'),
     )
@@ -91,13 +108,10 @@ def load_sources_config(path: str = 'config/sources.yaml') -> dict[str, Any] | l
     config_path = Path(path)
     if not config_path.is_absolute():
         config_path = BASE_DIR / config_path
-
     if not config_path.exists():
         return {'sources': []}
-
     with config_path.open('r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
-
     if isinstance(data, list):
         return data
     if isinstance(data, dict):
@@ -109,16 +123,13 @@ def load_digest_policy(path: str = 'config/digest_policy.yaml') -> dict[str, Any
     policy_path = Path(path)
     if not policy_path.is_absolute():
         policy_path = BASE_DIR / policy_path
-
     if not policy_path.exists():
         return DEFAULT_DIGEST_POLICY.copy()
-
     try:
         with policy_path.open('r', encoding='utf-8') as f:
             data = yaml.safe_load(f) or {}
         if not isinstance(data, dict):
             return DEFAULT_DIGEST_POLICY.copy()
-
         merged = DEFAULT_DIGEST_POLICY.copy()
         for key, value in data.items():
             if isinstance(value, dict) and isinstance(merged.get(key), dict):
@@ -134,16 +145,9 @@ def load_digest_policy(path: str = 'config/digest_policy.yaml') -> dict[str, Any
 
 def get_enabled_sources(path: str = 'config/sources.yaml') -> list[dict[str, Any]]:
     data = load_sources_config(path)
-
-    if isinstance(data, list):
-        sources = data
-    else:
-        sources = data.get('sources', [])
-
+    sources = data if isinstance(data, list) else data.get('sources', [])
     enabled_sources: list[dict[str, Any]] = []
     for source in sources:
-        if not isinstance(source, dict):
-            continue
-        if source.get('enabled', True):
+        if isinstance(source, dict) and source.get('enabled', True):
             enabled_sources.append(source)
     return enabled_sources

@@ -4,8 +4,14 @@
     region: international
     language: en
     category: official_blog
+    content_type: company_blog
+    priority: 9
     url_or_endpoint: "https://openai.com/news/rss.xml"
     max_items: 30
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.6
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public RSS feed."
 
@@ -14,6 +20,8 @@
     region: international
     language: en
     category: ai_company
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -24,6 +32,8 @@
     region: international
     language: en
     category: ai_company
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -34,8 +44,14 @@
     region: international
     language: en
     category: ai_company
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "https://blogs.microsoft.com/ai/feed/"
     max_items: 20
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.6
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public RSS feed."
 
@@ -44,6 +60,8 @@
     region: international
     language: en
     category: ai_company
+    content_type: company_blog
+    priority: 7
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -54,8 +72,14 @@
     region: international
     language: en
     category: infra_chip
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "https://blogs.nvidia.com/feed/"
     max_items: 20
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.6
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public RSS feed."
 
@@ -64,8 +88,14 @@
     region: international
     language: en
     category: developer_tools
+    content_type: open_source
+    priority: 8
     url_or_endpoint: "https://huggingface.co/blog/feed.xml"
     max_items: 20
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.8
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public RSS feed; timeout tolerated."
 
@@ -74,6 +104,8 @@
     region: international
     language: en
     category: official_blog
+    content_type: company_blog
+    priority: 7
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -84,38 +116,74 @@
     region: international
     language: en
     category: developer_tools
+    content_type: community
+    priority: 7
     url_or_endpoint: "https://simonwillison.net/atom/everything/"
     max_items: 20
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.8
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public Atom feed; useful for AI developer tooling trends."
 
-  - name: Latent Space
-    type: rss_or_web
+  - name: TechCrunch AI
+    type: rss
     region: international
     language: en
-    category: developer_tools
-    url_or_endpoint: "TODO"
+    category: ai_media
+    content_type: media
+    priority: 7
+    url_or_endpoint: "https://techcrunch.com/tag/artificial-intelligence/feed/"
     max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.8
+    cache_ttl_seconds: 300
+    enabled: true
+    notes: "Public RSS feed."
 
-  - name: Papers with Code Trending
-    type: rss_or_web
+  - name: MIT Technology Review AI
+    type: rss
     region: international
     language: en
-    category: research
-    url_or_endpoint: "TODO"
+    category: ai_media
+    content_type: media
+    priority: 7
+    url_or_endpoint: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
+    max_items: 20
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.8
+    cache_ttl_seconds: 300
+    enabled: true
+    notes: "Public topic feed."
+
+  - name: VentureBeat AI
+    type: rss
+    region: international
+    language: en
+    category: ai_media
+    content_type: media
+    priority: 5
+    url_or_endpoint: "https://venturebeat.com/ai/feed/"
     max_items: 20
     enabled: false
-    notes: "TODO: verify stable public feed endpoint."
+    notes: "RSS endpoint returned 404; needs verification."
 
   - name: Hacker News AI Search
     type: hn_algolia
     region: international
     language: en
     category: ai_media
+    content_type: community
+    priority: 7
     url_or_endpoint: "https://hn.algolia.com/api/v1/search_by_date"
     max_items: 60
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.6
+    cache_ttl_seconds: 120
     enabled: true
     notes: "Stable API endpoint."
 
@@ -124,8 +192,14 @@
     region: international
     language: en
     category: research
+    content_type: research
+    priority: 8
     url_or_endpoint: "http://export.arxiv.org/api/query"
     max_items: 20
+    timeout_seconds: 25
+    max_retries: 1
+    request_interval_seconds: 2.5
+    cache_ttl_seconds: 60
     enabled: true
     notes: "Stable API endpoint with polite pacing."
 
@@ -134,56 +208,99 @@
     region: international
     language: en
     category: open_source_project
+    content_type: open_source
+    priority: 7
     url_or_endpoint: "https://github.com/trending"
     max_items: 10
+    timeout_seconds: 20
+    max_retries: 2
+    request_interval_seconds: 0.8
+    cache_ttl_seconds: 300
     enabled: true
     notes: "Public trending page."
 
-  - name: TechCrunch AI
-    type: rss
+  - name: Semantic Scholar AI
+    type: semantic_scholar
     region: international
     language: en
-    category: ai_media
-    url_or_endpoint: "https://techcrunch.com/tag/artificial-intelligence/feed/"
-    max_items: 20
-    enabled: true
-    notes: "Public RSS feed."
-
-  - name: VentureBeat AI
-    type: rss
-    region: international
-    language: en
-    category: ai_media
-    url_or_endpoint: "https://venturebeat.com/ai/feed/"
-    max_items: 20
+    category: research
+    content_type: research
+    priority: 6
+    url_or_endpoint: "https://api.semanticscholar.org/graph/v1/paper/search"
+    max_items: 10
+    timeout_seconds: 20
+    max_retries: 1
+    request_interval_seconds: 1.0
     enabled: false
-    notes: "RSS endpoint returned 404; needs verification."
+    notes: "Optional API source; enable if stable in your network."
 
-  - name: The Decoder
-    type: rss_or_web
+  - name: Crossref AI
+    type: crossref
     region: international
     language: en
-    category: ai_media
-    url_or_endpoint: "TODO"
-    max_items: 20
+    category: research
+    content_type: research
+    priority: 5
+    url_or_endpoint: "https://api.crossref.org/works"
+    max_items: 10
+    timeout_seconds: 20
+    max_retries: 1
+    request_interval_seconds: 1.0
     enabled: false
-    notes: "TODO: verify stable feed endpoint."
+    notes: "Optional API source for publication metadata."
 
-  - name: MIT Technology Review AI
-    type: rss
+  - name: GDELT AI News
+    type: gdelt
     region: international
     language: en
     category: ai_media
-    url_or_endpoint: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
-    max_items: 20
-    enabled: true
-    notes: "Public topic feed."
+    content_type: industry
+    priority: 4
+    url_or_endpoint: "https://api.gdeltproject.org/api/v2/doc/doc"
+    max_items: 8
+    timeout_seconds: 20
+    max_retries: 1
+    request_interval_seconds: 1.0
+    enabled: false
+    notes: "Optional high-noise source; keep capped."
+
+  - name: GitHub API AI Repos
+    type: github_api
+    region: international
+    language: en
+    category: open_source_project
+    content_type: open_source
+    priority: 6
+    url_or_endpoint: "https://api.github.com/search/repositories"
+    max_items: 10
+    timeout_seconds: 20
+    max_retries: 1
+    request_interval_seconds: 1.0
+    enabled: false
+    notes: "Optional API source; token improves stability but is not required."
+
+  - name: RSSHub Optional Route Example
+    type: rsshub
+    region: international
+    language: en
+    category: ai_media
+    content_type: media
+    priority: 3
+    url_or_endpoint: "/example/route"
+    max_items: 10
+    timeout_seconds: 20
+    max_retries: 1
+    request_interval_seconds: 1.0
+    enabled: false
+    notes: "Optional fallback route; requires RSSHUB_ENABLED=true and valid RSSHUB_BASE_URL."
 
   - name: 量子位
     type: rss_or_web
     region: chinese
     language: zh
     category: ai_media
+    content_type: media
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -194,6 +311,8 @@
     region: chinese
     language: zh
     category: ai_media
+    content_type: media
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -204,6 +323,8 @@
     region: chinese
     language: zh
     category: official_blog
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -214,6 +335,8 @@
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -224,6 +347,8 @@
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
@@ -234,6 +359,8 @@
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false

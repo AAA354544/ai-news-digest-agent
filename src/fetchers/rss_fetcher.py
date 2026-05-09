@@ -16,21 +16,31 @@ class RSSFetcher(BaseFetcher):
     def fetch(self) -> list[CandidateNews]:
         endpoint = (self.source_config.url_or_endpoint or '').strip()
         if is_placeholder_url(endpoint):
-            print(f"[RSSFetcher] skip placeholder endpoint: {self.source_config.name}")
+            self.set_health('skipped_placeholder', 'placeholder endpoint')
             return []
+
         max_items = self.source_config.max_items or 30
+        timeout = self.source_config.timeout_seconds or 20
+        retries = self.source_config.max_retries if self.source_config.max_retries is not None else 2
+        interval = self.source_config.request_interval_seconds if self.source_config.request_interval_seconds is not None else 0.5
+        cache_ttl = self.source_config.cache_ttl_seconds if self.source_config.cache_ttl_seconds is not None else 300
+
+        result = safe_get(
+            endpoint,
+            timeout=timeout,
+            max_retries=retries,
+            request_interval_seconds=interval,
+            cache_ttl_seconds=cache_ttl,
+        )
+        if result.response is None:
+            self.set_health(result.status, result.note)
+            return []
 
         try:
-            resp = safe_get(endpoint, timeout=20, max_retries=2)
-            if resp is None:
-                return []
-            parsed = feedparser.parse(resp.text)
+            parsed = feedparser.parse(result.response.text)
         except Exception as exc:
-            print(f"[RSSFetcher] fetch failed for {self.source_config.name}: {exc}")
+            self.set_health('failed_but_continued', f'feed parse error: {exc}')
             return []
-
-        if getattr(parsed, 'bozo', False):
-            print(f"[RSSFetcher] parse warning for {self.source_config.name}: {getattr(parsed, 'bozo_exception', '')}")
 
         items: list[CandidateNews] = []
         for entry in getattr(parsed, 'entries', []):
@@ -38,10 +48,8 @@ class RSSFetcher(BaseFetcher):
             url = (entry.get('link') or '').strip()
             if not title or not url:
                 continue
-
             published = entry.get('published') or entry.get('updated')
             summary = entry.get('summary') or entry.get('description')
-
             items.append(
                 CandidateNews(
                     id=self.build_candidate_id(url),
@@ -60,4 +68,6 @@ class RSSFetcher(BaseFetcher):
             )
             if len(items) >= max_items:
                 break
+
+        self.set_health('ok' if items else 'empty', f'items={len(items)}')
         return items

@@ -11,32 +11,47 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.config import get_enabled_sources
+from src.config import get_enabled_sources, load_app_config
 from src.fetchers.arxiv_fetcher import ArxivFetcher
+from src.fetchers.base import BaseFetcher
+from src.fetchers.crossref_fetcher import CrossrefFetcher
+from src.fetchers.gdelt_fetcher import GDELTFetcher
+from src.fetchers.github_api_fetcher import GitHubAPIFetcher
 from src.fetchers.github_trending_fetcher import GitHubTrendingFetcher
 from src.fetchers.hn_fetcher import HackerNewsFetcher
 from src.fetchers.rss_fetcher import RSSFetcher
+from src.fetchers.rsshub_fetcher import RSSHubFetcher
+from src.fetchers.semantic_scholar_fetcher import SemanticScholarFetcher
 from src.fetchers.web_extractor import extract_text_from_url
 from src.models import CandidateNews
 from src.utils.http_utils import is_placeholder_url
 from src.utils.source_health import save_source_health
 
 
-def run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
+def build_fetcher(source: dict[str, Any]) -> BaseFetcher | None:
     source_type = source.get('type', '').strip()
-
     if source_type == 'rss':
-        return RSSFetcher(source).fetch()
+        return RSSFetcher(source)
     if source_type == 'hn_algolia':
-        return HackerNewsFetcher(source).fetch()
+        return HackerNewsFetcher(source)
     if source_type == 'arxiv':
-        return ArxivFetcher(source).fetch()
+        return ArxivFetcher(source)
     if source_type == 'github_trending':
-        return GitHubTrendingFetcher(source).fetch()
+        return GitHubTrendingFetcher(source)
     if source_type == 'rss_or_web':
-        return RSSFetcher(source).fetch()
-
-    return []
+        return RSSFetcher(source)
+    if source_type == 'semantic_scholar':
+        return SemanticScholarFetcher(source)
+    if source_type == 'crossref':
+        return CrossrefFetcher(source)
+    if source_type == 'gdelt':
+        return GDELTFetcher(source)
+    if source_type == 'github_api':
+        return GitHubAPIFetcher(source)
+    if source_type == 'rsshub':
+        cfg = load_app_config()
+        return RSSHubFetcher(source, rsshub_base_url=cfg.rsshub_base_url, enabled=cfg.rsshub_enabled)
+    return None
 
 
 def to_json_compatible(items: list[CandidateNews]) -> list[dict[str, Any]]:
@@ -75,27 +90,35 @@ def main() -> None:
             )
             continue
 
+        fetcher = build_fetcher(source)
+        if fetcher is None:
+            print(f'source={source_name} count=0 status=failed_but_continued')
+            health_records.append(
+                {
+                    'name': source_name,
+                    'type': source_type,
+                    'enabled': bool(source.get('enabled', True)),
+                    'status': 'failed_but_continued',
+                    'count': 0,
+                    'note': 'unsupported source type',
+                }
+            )
+            continue
+
+        count = 0
         status = 'empty'
         note = ''
-        count = 0
         try:
-            items = run_fetcher(source)
+            items = fetcher.fetch()
             count = len(items)
             all_candidates.extend(items)
-            status = 'ok' if count > 0 else 'empty'
-        except TimeoutError:
-            status = 'timeout'
-            note = 'timeout'
+            health = fetcher.get_health()
+            status = health.get('status', 'ok')
+            note = health.get('note', '')
+            if count > 0:
+                status = 'ok'
         except Exception as exc:
-            msg = str(exc).lower()
-            if '429' in msg or 'rate' in msg:
-                status = 'rate_limited'
-            elif '404' in msg:
-                status = 'http_404'
-            elif 'timeout' in msg:
-                status = 'timeout'
-            else:
-                status = 'failed_but_continued'
+            status = 'failed_but_continued'
             note = str(exc)
 
         print(f'source={source_name} count={count} status={status}')
