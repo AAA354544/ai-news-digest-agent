@@ -32,13 +32,13 @@ def main() -> None:
     print(f"html path: {html_path}")
     print(f"markdown path: {md_path}")
 
-    try:
-        sender.send_digest_email(html_path=html_path, markdown_path=md_path)
-    except ValueError as exc:
-        print(f"Email config not ready: {exc}")
+    result = sender.send_digest_email(html_path=html_path, markdown_path=md_path)
+    if result.get("success"):
+        print(f"email result: success={result.get('success')} recipients={result.get('recipients')} dry_run={result.get('dry_run')}")
+        print("Module 6 email test completed.")
         return
 
-    print("Module 6 email test completed.")
+    print(f"Email config/send not ready: {result.get('error')}")
 
 
 if __name__ == "__main__":

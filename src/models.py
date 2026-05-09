@@ -12,8 +12,15 @@ class SourceConfig(BaseModel):
     region: str = 'global'
     language: str = 'en'
     category: str = 'ai'
+    content_type: str = 'media'
+    priority: int = 1
     url_or_endpoint: str = ''
     max_items: Optional[int] = None
+    timeout_seconds: int = 20
+    max_retries: int = 2
+    request_interval_seconds: float = 0.8
+    tags: list[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
     enabled: bool = True
     notes: Optional[str] = None
 
@@ -62,6 +69,12 @@ class SourceStatistics(BaseModel):
     source_count: int = 0
     international_count: Optional[int] = None
     chinese_count: Optional[int] = None
+
+    raw_candidates: Optional[int] = None
+    cluster_input_candidates: Optional[int] = None
+    event_clusters: Optional[int] = None
+    final_llm_events: Optional[int] = None
+    appendix_items: Optional[int] = None
 
 
 class DailyDigest(BaseModel):

@@ -98,3 +98,88 @@ streamlit run app.py
 ## Repo Hygiene
 - Do not commit `.env`
 - Do not commit runtime data under `data/` and `outputs/`
+
+## Long-run Architecture Optimization (Latest)
+
+### What Changed
+- Fixed topic override propagation across Streamlit, CLI, pipeline, and LLM analysis.
+- Added staged candidate pool controls:
+  - `raw_candidates`
+  - `cleaned_candidates`
+  - `cluster_input_candidates`
+  - `event_clusters`
+  - `final_llm_events`
+- Added deterministic event clustering for multi-source event merge before final digest generation.
+- Added layered LLM mode (`single` / `layered`) with safe fallback to candidate-based flow.
+- Expanded Chinese source configuration with enabled public feed candidates and disabled TODO official sources.
+
+### Topic Override
+- Streamlit `Topic` input now passes into `run_full_pipeline(..., topic_override=...)`.
+- CLI now supports `--topic` for `fetch`, `analyze`, and `run-pipeline`.
+- Final digest `topic` field is forced to override value when provided.
+
+### Candidate Pool Controls
+Environment variables:
+- `MAX_RAW_CANDIDATES`
+- `MAX_CLUSTER_INPUT_CANDIDATES`
+- `MAX_LLM_EVENTS`
+- `MAX_LLM_CANDIDATES` (backward-compatible)
+- `MAIN_DIGEST_MIN_ITEMS`
+- `MAIN_DIGEST_MAX_ITEMS`
+- `APPENDIX_MAX_ITEMS`
+
+### Layered LLM Pipeline
+Environment variables:
+- `LLM_PIPELINE_MODE=single|layered`
+- `LLM_PREPROCESS_ENABLED=true|false`
+- `LLM_PREPROCESS_PROVIDER`
+- `LLM_PREPROCESS_MODEL`
+- `LLM_FINAL_PROVIDER`
+- `LLM_FINAL_MODEL`
+- `LLM_REPAIR_PROVIDER`
+- `LLM_REPAIR_MODEL`
+
+If layered mode fails, pipeline falls back to candidate-based digest generation.
+
+### Compliance Note
+- Public-source-only collection.
+- No login/paywall/captcha bypass.
+- No Selenium/Playwright/browser automation scraping.
+- `.env` must never be committed.
+
+## Streamlit Usage (Updated)
+
+Run:
+```bash
+streamlit run app.py
+```
+
+In sidebar:
+- `Topic`: passed through to pipeline (`topic_override`) and used in final digest topic.
+- `Final events/candidates sent to LLM`: passed as `llm_candidate_limit`.
+- `Send email after full pipeline`: when enabled, full pipeline triggers email step.
+- `Email dry run`: when enabled, email logic is executed but SMTP send is skipped.
+
+### Email Config For Streamlit
+Required env vars:
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SENDER_EMAIL`
+- `SMTP_AUTH_CODE`
+- `RECIPIENT_EMAIL` or `RECIPIENT_EMAILS`
+
+Optional:
+- `MAX_RECIPIENTS_PER_RUN`
+- `SEND_EMAIL`
+- `DRY_RUN`
+
+### Report-only / Email-only
+- Report only: click `Generate Report Only`.
+- Email only: click `Send Latest Email`.
+
+### Manual Verification (Streamlit logic)
+```bash
+python tests/manual_test_streamlit_logic.py
+```
+
+`.env` should never be committed.

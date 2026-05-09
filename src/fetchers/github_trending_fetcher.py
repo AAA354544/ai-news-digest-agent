@@ -17,26 +17,31 @@ class GitHubTrendingFetcher(BaseFetcher):
     def __init__(self, source_config: SourceConfig | dict[str, Any]) -> None:
         super().__init__(source_config)
 
-    def fetch(self) -> list[CandidateNews]:
+    def fetch(self, topic: str | None = None) -> list[CandidateNews]:
         endpoint = (self.source_config.url_or_endpoint or self.DEFAULT_ENDPOINT).strip() or self.DEFAULT_ENDPOINT
         items: list[CandidateNews] = []
         max_items = self.source_config.max_items or 10
 
-        resp = safe_get(endpoint, timeout=20, max_retries=2)
-        if resp is None:
-            print('[GitHubTrendingFetcher] request failed/empty.')
+        result = safe_get(
+            endpoint,
+            timeout=self.source_config.timeout_seconds,
+            max_retries=self.source_config.max_retries,
+            request_interval_seconds=self.source_config.request_interval_seconds,
+        )
+        if result.response is None:
+            self.set_health(result.status, result.note)
             return []
 
         try:
-            soup = BeautifulSoup(resp.text, 'html.parser')
+            soup = BeautifulSoup(result.response.text, 'html.parser')
             articles = soup.select('article.Box-row')
         except Exception as exc:
-            print(f'[GitHubTrendingFetcher] parse failed: {exc}')
+            self.set_health('failed_but_continued', f'parse error: {exc}')
             return []
 
-        if not articles:
-            print('[GitHubTrendingFetcher] no trending entries found.')
-            return []
+        keywords = list(self.KEYWORDS)
+        if topic and topic.strip():
+            keywords.extend([x.lower() for x in topic.split() if x.strip()])
 
         for article in articles:
             a_tag = article.select_one('h2 a')
@@ -51,7 +56,7 @@ class GitHubTrendingFetcher(BaseFetcher):
             description = description_tag.get_text(' ', strip=True) if description_tag else ''
 
             searchable = f'{title} {description}'.lower()
-            if not any(keyword in searchable for keyword in self.KEYWORDS):
+            if not any(keyword in searchable for keyword in keywords):
                 continue
 
             items.append(
@@ -72,4 +77,6 @@ class GitHubTrendingFetcher(BaseFetcher):
             )
             if len(items) >= max_items:
                 break
+
+        self.set_health('ok' if items else 'empty', f'items={len(items)}')
         return items

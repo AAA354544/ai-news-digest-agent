@@ -24,6 +24,7 @@ class LLMClient:
             base_url=self.config.zhipu_base_url,
             timeout=120,
         )
+        self.model_name = self.config.llm_final_model or self.config.zhipu_model
 
     def _to_serializable(self, value: Any) -> Any:
         if value is None:
@@ -66,7 +67,7 @@ class LLMClient:
         for attempt in range(1, max_attempts + 1):
             try:
                 resp = self.client.chat.completions.create(
-                    model=self.config.zhipu_model,
+                    model=self.model_name,
                     temperature=0.2,
                     max_tokens=DEFAULT_ZHIPU_MAX_TOKENS,
                     extra_body={

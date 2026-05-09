@@ -40,9 +40,11 @@ def status() -> None:
 
 
 @app.command("fetch")
-def fetch_cmd() -> None:
+def fetch_cmd(
+    topic: Optional[str] = typer.Option(None, "--topic", help="Override digest topic for this run."),
+) -> None:
     console.print("[cyan]Running fetch step...[/cyan]")
-    path = run_fetch_step()
+    path = run_fetch_step(topic_override=topic)
     console.print(f"[green]Fetch completed.[/green] raw_path={path}")
 
 
@@ -56,9 +58,10 @@ def clean_cmd() -> None:
 @app.command("analyze")
 def analyze_cmd(
     llm_limit: Optional[int] = typer.Option(None, "--llm-limit", help="LLM candidate limit for test runs."),
+    topic: Optional[str] = typer.Option(None, "--topic", help="Override digest topic for this run."),
 ) -> None:
     console.print("[cyan]Running analyze step...[/cyan]")
-    path = run_analyze_step(limit_for_test=llm_limit)
+    path = run_analyze_step(limit_for_test=llm_limit, topic_override=topic)
     console.print(f"[green]Analyze completed.[/green] digest_path={path}")
 
 
@@ -80,9 +83,10 @@ def send_email_cmd() -> None:
 def run_pipeline_cmd(
     send_email: bool = typer.Option(False, "--send-email", help="Send email after report generation."),
     llm_limit: Optional[int] = typer.Option(None, "--llm-limit", help="LLM candidate limit for this run."),
+    topic: Optional[str] = typer.Option(None, "--topic", help="Override digest topic for this run."),
 ) -> None:
     console.print("[cyan]Running full pipeline...[/cyan]")
-    outputs = run_full_pipeline(send_email=send_email, llm_candidate_limit=llm_limit)
+    outputs = run_full_pipeline(send_email=send_email, llm_candidate_limit=llm_limit, topic_override=topic)
     console.print("[green]Pipeline completed.[/green]")
     for key, value in outputs.items():
         console.print(f"{key}: {value}")

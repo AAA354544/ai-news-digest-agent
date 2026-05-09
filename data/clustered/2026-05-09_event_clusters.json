@@ -1,0 +1,898 @@
+[
+  {
+    "event_id": "evt_0014",
+    "representative_title": "What if new proofs are included in LLM training so LLM rediscover it?",
+    "normalized_key": "are if included it llm new proofs rediscover",
+    "category_hint": "ai_media",
+    "importance_score": 0.643,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://news.ycombinator.com/item?id=48073325",
+      "https://news.ycombinator.com/item?id=48071158",
+      "https://news.ycombinator.com/item?id=48070363",
+      "https://news.ycombinator.com/item?id=48069781"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 4
+  },
+  {
+    "event_id": "evt_0042",
+    "representative_title": "颠覆认知：运维 Agent 靠知识，Coding Agent 靠约束！",
+    "normalized_key": "agent coding 运维 靠知识 靠约束 颠覆认知",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/video/fXEzyFJ4jDYk0H0fPSIX"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0049",
+    "representative_title": "百度发布文心 5.1：搜索能力登顶国内，预训练成本仅为业界 6%",
+    "normalized_key": "搜索能力登顶国内 百度发布文心 预训练成本仅为业界",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "量子位"
+    ],
+    "links": [
+      "https://www.qbitai.com/2026/05/414496.html"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0004",
+    "representative_title": "创新智能体 新质生产力 ｜ 博云企业级 AI 原生智能体平台 BoAgent 暨生态合作战略发布会",
+    "normalized_key": "boagent 创新智能体 博云企业级 原生智能体平台 新质生产力 暨生态合作战略发布会",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/video/Ch593mOMhlZBcTOzlXoh"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0001",
+    "representative_title": "9点1氪丨DeepSeek拟募资最高500亿；“全国销冠”被刑拘，泰康人寿回应；OPPO就母亲节文案致歉",
+    "normalized_key": "9点1氪丨deepseek拟募资最高500亿 oppo就母亲节文案致歉 全国销冠 泰康人寿回应 被刑拘",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3801348046151428?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0002",
+    "representative_title": "小红书四年AI 路：FOMO、犹豫，到突然加速",
+    "normalized_key": "fomo 到突然加速 小红书四年ai 犹豫",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3799028783439111?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0003",
+    "representative_title": "36氪首发 | 清华系AI Infra厂商完成数亿元融资，以GPU为核心重构计算机系统架构",
+    "normalized_key": "36氪首发 infra厂商完成数亿元融资 以gpu为核心重构计算机系统架构 清华系ai",
+    "category_hint": "ai_media",
+    "importance_score": 0.543,
+    "region_hint": "chinese",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3799984046333186?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0031",
+    "representative_title": "bytedance / UI-TARS-desktop",
+    "normalized_key": "bytedance desktop tars ui",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/bytedance/UI-TARS-desktop"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0032",
+    "representative_title": "rohitg00 / agentmemory",
+    "normalized_key": "agentmemory rohitg00",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/rohitg00/agentmemory"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0033",
+    "representative_title": "addyosmani / agent-skills",
+    "normalized_key": "addyosmani agent skills",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/addyosmani/agent-skills"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0034",
+    "representative_title": "oracle-devrel / oracle-ai-developer-hub",
+    "normalized_key": "developer devrel hub oracle",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/oracle-devrel/oracle-ai-developer-hub"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0036",
+    "representative_title": "datawhalechina / hello-agents",
+    "normalized_key": "agents datawhalechina hello",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/datawhalechina/hello-agents"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0038",
+    "representative_title": "ChromeDevTools / chrome-devtools-mcp",
+    "normalized_key": "chrome chromedevtools devtools mcp",
+    "category_hint": "open_source_project",
+    "importance_score": 0.518,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/ChromeDevTools/chrome-devtools-mcp"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0050",
+    "representative_title": "Agentwerk: A minimal Rust crate for agentic apps",
+    "normalized_key": "agentic agentwerk apps crate minimal rust",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://github.com/canvascomputing/agentwerk"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0015",
+    "representative_title": "Show HN: Dikaletus – meeting recording and transcription using Mistral AI",
+    "normalized_key": "dikaletus hn meeting mistral recording show transcription using",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://codeberg.org/MimosaDev/dikaletus"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0016",
+    "representative_title": "Cloud Embeddings vs. Local Sovereign Memory",
+    "normalized_key": "cloud embeddings local memory sovereign vs",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://medium.com/@vektormemory/cloud-embeddings-vs-local-sovereign-memory-ai-agent-memory-layer-compared-2026-21461bf8a4aa"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0018",
+    "representative_title": "I built a baremetal RustOS (O(1)allocator NVMeDMA ZeroTrust sandbox for AIAgents",
+    "normalized_key": "aiagents allocator baremetal built nvmedma rustos sandbox zerotrust",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://github.com/joreag/polymorph_os"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0013",
+    "representative_title": "Show HN: Contral – the agent which will teach you while you build with AI",
+    "normalized_key": "agent build contral hn show teach which while",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://contral.ai"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0021",
+    "representative_title": "Show HN: Cyoda-go – application platform in Go without the Temporal/Kafka glue",
+    "normalized_key": "application cyoda glue go hn kafka platform show",
+    "category_hint": "ai_media",
+    "importance_score": 0.493,
+    "region_hint": "international",
+    "topic_relevance_score": 1.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://github.com/Cyoda-platform/cyoda-go"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0043",
+    "representative_title": "AI 把编程这件事接管之后，作为程序员的我该何去何从？",
+    "normalized_key": "作为程序员的我该何去何从 把编程这件事接管之后",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/article/128UQPlXTAZjV9uwjYFJ"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0044",
+    "representative_title": "停止编码的那天，就是失去架构判断力的开始：一位 30 年架构师的 AI 生存指南",
+    "normalized_key": "30 一位 停止编码的那天 就是失去架构判断力的开始 年架构师的 生存指南",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/article/zLaHwePKytptG102IscF"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0045",
+    "representative_title": "技术·艺术· 算术：京东零售 AIGC 百亿素材供给实践",
+    "normalized_key": "aigc 京东零售 技术 百亿素材供给实践 算术 艺术",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/article/YAWWcRb4eBYRSHyVAw2Q"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0007",
+    "representative_title": "Meta部署统一的AI智能体，实现超大规模环境的自动化性能优化",
+    "normalized_key": "meta部署统一的ai智能体 实现超大规模环境的自动化性能优化",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/article/OAkOq3ctjYBk1fD5WxJr"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0046",
+    "representative_title": "生成式推荐引擎升级，快手在线参数服务器性能与时延深度优化实践｜AICon上海",
+    "normalized_key": "aicon上海 快手在线参数服务器性能与时延深度优化实践 生成式推荐引擎升级",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "InfoQ 中文"
+    ],
+    "links": [
+      "https://www.infoq.cn/article/W3vmt9ADbhyIlGieJZ9Y"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0008",
+    "representative_title": "不更新参数就能强化学习！OpenAI翁家翌提出新范式：决策只需AI手搓一个.py 文件",
+    "normalized_key": "openai翁家翌提出新范式 py 不更新参数就能强化学习 决策只需ai手搓一个 文件",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "量子位"
+    ],
+    "links": [
+      "https://www.qbitai.com/2026/05/414827.html"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0047",
+    "representative_title": "谷歌「AI联合数学家」来了！刷新最难数学AI基准SOTA，牛津教授用它解开群论悬案",
+    "normalized_key": "ai联合数学家 刷新最难数学ai基准sota 来了 牛津教授用它解开群论悬案 谷歌",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "量子位"
+    ],
+    "links": [
+      "https://www.qbitai.com/2026/05/414788.html"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0048",
+    "representative_title": "行业首创空间3D显示，还能主动提醒和帮忙叫车，千问AI眼镜这操作真把我看愣了",
+    "normalized_key": "千问ai眼镜这操作真把我看愣了 行业首创空间3d显示 还能主动提醒和帮忙叫车",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "量子位"
+    ],
+    "links": [
+      "https://www.qbitai.com/2026/05/414501.html"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0009",
+    "representative_title": "打破科技数据壁垒！智会心研官宣：高级检索+AI深度分析，面向个人免费开放！",
+    "normalized_key": "ai深度分析 打破科技数据壁垒 智会心研官宣 面向个人免费开放 高级检索",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "量子位"
+    ],
+    "links": [
+      "https://www.qbitai.com/2026/05/414445.html"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0039",
+    "representative_title": "Quoting Luke Curley",
+    "normalized_key": "curley luke quoting",
+    "category_hint": "developer_tools",
+    "importance_score": 0.443,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Simon Willison Blog"
+    ],
+    "links": [
+      "https://simonwillison.net/2026/May/9/luke-curley/"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0005",
+    "representative_title": "Musk v. Altman week 2: OpenAI fires back, and Shivon Zilis reveals that Musk tried to poach Sam Altman",
+    "normalized_key": "altman back fires musk openai poach reveals sam",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "MIT Technology Review AI"
+    ],
+    "links": [
+      "https://www.technologyreview.com/2026/05/08/1137008/musk-v-altman-week-2-openai-fires-back-and-shivon-zilis-reveals-that-musk-tried-to-poach-sam-altman/"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0040",
+    "representative_title": "Using Claude Code: The Unreasonable Effectiveness of HTML",
+    "normalized_key": "claude code effectiveness html unreasonable using",
+    "category_hint": "developer_tools",
+    "importance_score": 0.443,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Simon Willison Blog"
+    ],
+    "links": [
+      "https://simonwillison.net/2026/May/8/unreasonable-effectiveness-of-html/"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0006",
+    "representative_title": "Plaud获头部大厂投资，目前估值达20亿美元｜硬氪独家",
+    "normalized_key": "plaud获头部大厂投资 目前估值达20亿美元 硬氪独家",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3799129165863937?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0010",
+    "representative_title": "AI开始接管年轻人的「精神自留地」",
+    "normalized_key": "ai开始接管年轻人的 精神自留地",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3801461350702855?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0011",
+    "representative_title": "获高秉强、蓝驰领投数千万融资，浙大00后创业者从远景观测切入AI智能影像｜硬氪首发",
+    "normalized_key": "浙大00后创业者从远景观测切入ai智能影像 硬氪首发 获高秉强 蓝驰领投数千万融资",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/p/3797202414820359?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0012",
+    "representative_title": "光帆带摄像头AI耳机本月开售",
+    "normalized_key": "光帆带摄像头ai耳机本月开售",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/newsflashes/3801812857871876?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0041",
+    "representative_title": "字节跳动据悉计划将AI基础设施支出增加25%",
+    "normalized_key": "字节跳动据悉计划将ai基础设施支出增加25",
+    "category_hint": "ai_media",
+    "importance_score": 0.443,
+    "region_hint": "chinese",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "36氪"
+    ],
+    "links": [
+      "https://36kr.com/newsflashes/3801787739282952?f=rss"
+    ],
+    "source_types": [
+      "rss"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0035",
+    "representative_title": "decolua / 9router",
+    "normalized_key": "9router decolua",
+    "category_hint": "open_source_project",
+    "importance_score": 0.418,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/decolua/9router"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0037",
+    "representative_title": "rowboatlabs / rowboat",
+    "normalized_key": "rowboat rowboatlabs",
+    "category_hint": "open_source_project",
+    "importance_score": 0.418,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "GitHub Trending AI"
+    ],
+    "links": [
+      "https://github.com/rowboatlabs/rowboat"
+    ],
+    "source_types": [
+      "github_trending"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0024",
+    "representative_title": "Show HN: DuoSolve – Daily grammer practice game",
+    "normalized_key": "daily duosolve game grammer hn practice show",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://duobook.co/duosolve"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0025",
+    "representative_title": "Practice reviewing risky AI-generated engineering output",
+    "normalized_key": "engineering generated output practice reviewing risky",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.proreview.dev/"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0026",
+    "representative_title": "Kanvly – notes and boards with AI, now on iOS",
+    "normalized_key": "boards ios kanvly notes now",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://kanvly.com"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0027",
+    "representative_title": "The World Inside Neural Networks",
+    "normalized_key": "inside networks neural world",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.goodfire.ai/research/the-world-inside-neural-networks"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0028",
+    "representative_title": "Terax – a 7mb AI terminal in Rust and Tauri [video]",
+    "normalized_key": "7mb rust tauri terax terminal video",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.youtube.com/watch?v=kykgXa7sm1g"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0022",
+    "representative_title": "Chrome's AI features may be hogging 4GB of your computer storage",
+    "normalized_key": "4gb be chrome computer features hogging may storage",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.theverge.com/tech/924933/google-chrome-4gb-gemini-nano-ai-features"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0029",
+    "representative_title": "Frontier plane reportedly strikes pedestrian on Denver Airport runway",
+    "normalized_key": "airport denver frontier pedestrian plane reportedly runway strikes",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.cnn.com/2026/05/09/us/frontier-reportedly-pedestrian-denver-runway-hnk"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0030",
+    "representative_title": "Cloudflare's slowing growth disappoints investors betting on AI boost",
+    "normalized_key": "betting boost cloudflare disappoints growth investors slowing",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://www.reuters.com/business/cloudflares-slowing-growth-disappoints-investors-betting-ai-boost-2026-05-08/"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  },
+  {
+    "event_id": "evt_0023",
+    "representative_title": "Why LLM-as-judge fails for code evaluation. Here's what works.",
+    "normalized_key": "as code evaluation fails here judge llm what",
+    "category_hint": "ai_media",
+    "importance_score": 0.393,
+    "region_hint": "international",
+    "topic_relevance_score": 0.0,
+    "source_names": [
+      "Hacker News AI Search"
+    ],
+    "links": [
+      "https://navigara.medium.com/the-story-of-navigara-how-we-built-the-performance-layer-for-modern-engineering-d621ffcce6bb"
+    ],
+    "source_types": [
+      "hn_algolia"
+    ],
+    "evidence_count": 1
+  }
+]

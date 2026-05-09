@@ -17,15 +17,12 @@ _TRACKING_PARAMS = {
     'gclid',
 }
 
-# Balance research with news/industry/dev trends.
 _SOURCE_PRIORITY = {
+    'rss': 5,
     'hn_algolia': 4,
-    'rss': 4,
-    'official_blog': 4,
-    'ai_media': 4,
-    'github_trending': 3,
+    'github_trending': 4,
+    'arxiv': 4,
     'rss_or_web': 3,
-    'arxiv': 2,
 }
 
 _KEYWORDS = (
@@ -68,13 +65,16 @@ def deduplicate_by_url(candidates: list[CandidateNews]) -> list[CandidateNews]:
     return deduped
 
 
-def rank_candidates_lightweight(candidates: list[CandidateNews]) -> list[CandidateNews]:
-    def _score(item: CandidateNews) -> tuple[int, int, int]:
+def rank_candidates_lightweight(candidates: list[CandidateNews], topic: str | None = None) -> list[CandidateNews]:
+    topic_tokens = [x.lower() for x in (topic or '').split() if x.strip()]
+
+    def _score(item: CandidateNews) -> tuple[int, int, int, int]:
         has_time = 1 if item.published_at else 0
         source_score = _SOURCE_PRIORITY.get(item.source_type, 1)
         text = f"{item.title} {item.summary_or_snippet or ''}".lower()
         keyword_score = sum(1 for kw in _KEYWORDS if kw in text)
-        return (has_time, source_score, keyword_score)
+        topic_score = sum(1 for tk in topic_tokens if tk in text)
+        return (topic_score, has_time, source_score, keyword_score)
 
     return sorted(candidates, key=_score, reverse=True)
 
@@ -85,15 +85,26 @@ def trim_candidates(candidates: list[CandidateNews], max_candidates: int) -> lis
     return candidates[:max_candidates]
 
 
-def prepare_llm_candidates(candidates: list[CandidateNews], lookback_hours: int, max_candidates: int) -> list[CandidateNews]:
+def prepare_llm_candidates(
+    candidates: list[CandidateNews],
+    lookback_hours: int,
+    max_candidates: int,
+    topic: str | None = None,
+    allow_overflow: bool = True,
+) -> list[CandidateNews]:
     cleaned = clean_candidates(candidates, lookback_hours=lookback_hours)
     deduped = deduplicate_by_url(cleaned)
-    ranked = rank_candidates_lightweight(deduped)
+    ranked = rank_candidates_lightweight(deduped, topic=topic)
 
     policy = load_digest_policy()
     quotas = policy.get('candidate_quotas', DEFAULT_SOURCE_QUOTAS)
     if not isinstance(quotas, dict):
         quotas = DEFAULT_SOURCE_QUOTAS
 
-    balanced = balance_candidates_by_source_type(ranked, max_candidates=max_candidates, quotas=quotas)
+    balanced = balance_candidates_by_source_type(
+        ranked,
+        max_candidates=max_candidates,
+        quotas=quotas,
+        allow_overflow=allow_overflow,
+    )
     return trim_candidates(balanced, max_candidates=max_candidates)

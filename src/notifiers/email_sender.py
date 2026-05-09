@@ -25,36 +25,75 @@ class EmailSender:
             errors.append("SENDER_EMAIL is missing or placeholder.")
         if self._is_placeholder(self.config.smtp_auth_code, ("your_smtp_authorization_code", "placeholder")):
             errors.append("SMTP_AUTH_CODE is missing or placeholder.")
-        if self._is_placeholder(self.config.recipient_email, ("your_receive_email", "placeholder")):
-            errors.append("RECIPIENT_EMAIL is missing or placeholder.")
+        if self._is_placeholder(self.config.recipient_email, ("your_receive_email", "placeholder")) and self._is_placeholder(
+            self.config.recipient_emails, ("your_receive_email", "placeholder")
+        ):
+            errors.append("RECIPIENT_EMAIL / RECIPIENT_EMAILS is missing or placeholder.")
         if not (self.config.smtp_host or "").strip():
             errors.append("SMTP_HOST is missing.")
 
         return errors
 
     def _parse_recipients(self) -> list[str]:
-        raw = self.config.recipient_email or ""
-        recipients = [item.strip() for item in raw.split(",") if item.strip()]
-        return recipients
+        raw_values = [self.config.recipient_email or "", self.config.recipient_emails or ""]
+        recipients: list[str] = []
+        for raw in raw_values:
+            recipients.extend([item.strip() for item in raw.split(",") if item.strip()])
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for r in recipients:
+            lowered = r.lower()
+            if lowered in seen:
+                continue
+            seen.add(lowered)
+            deduped.append(r)
+
+        max_allowed = max(1, int(self.config.max_recipients_per_run or 5))
+        return deduped[:max_allowed]
+
+    def _mask_email(self, email: str) -> str:
+        v = (email or "").strip()
+        if "@" not in v:
+            return "***"
+        name, domain = v.split("@", 1)
+        if len(name) <= 2:
+            return f"{name[:1]}*@{domain}"
+        return f"{name[:2]}***@{domain}"
 
     def send_digest_email(
         self,
         html_path: str | Path,
         markdown_path: str | Path,
         subject: str | None = None,
-    ) -> None:
+    ) -> dict[str, object]:
         errors = self._validate_settings()
         if errors:
-            raise ValueError("Invalid SMTP config: " + " ".join(errors))
+            return {
+                "success": False,
+                "recipients": [],
+                "subject": subject or "",
+                "error": "Invalid SMTP config: " + " ".join(errors),
+            }
 
         html_file = Path(html_path)
         md_file = Path(markdown_path)
         if not html_file.exists() or not md_file.exists():
-            raise FileNotFoundError("Report files are missing. Please run: python tests/manual_test_report.py")
+            return {
+                "success": False,
+                "recipients": [],
+                "subject": subject or "",
+                "error": "Report files are missing. Please run: python tests/manual_test_report.py",
+            }
 
         recipients = self._parse_recipients()
         if not recipients:
-            raise ValueError("No valid RECIPIENT_EMAIL found.")
+            return {
+                "success": False,
+                "recipients": [],
+                "subject": subject or "",
+                "error": "No valid RECIPIENT_EMAIL/RECIPIENT_EMAILS found.",
+            }
 
         digest_date = date.today().isoformat()
         mail_subject = subject or f"AI News Digest - {digest_date}"
@@ -75,14 +114,40 @@ class EmailSender:
             filename=md_file.name,
         )
 
-        if self.config.smtp_use_ssl:
-            with smtplib.SMTP_SSL(self.config.smtp_host, self.config.smtp_port, timeout=30) as server:
-                server.login(self.config.sender_email, self.config.smtp_auth_code)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(self.config.smtp_host, self.config.smtp_port, timeout=30) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(self.config.sender_email, self.config.smtp_auth_code)
-                server.send_message(msg)
+        masked = [self._mask_email(r) for r in recipients]
+        if self.config.dry_run:
+            return {
+                "success": True,
+                "recipients": masked,
+                "subject": mail_subject,
+                "error": "",
+                "dry_run": True,
+            }
+
+        try:
+            if self.config.smtp_use_ssl:
+                with smtplib.SMTP_SSL(self.config.smtp_host, self.config.smtp_port, timeout=30) as server:
+                    server.login(self.config.sender_email, self.config.smtp_auth_code)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(self.config.smtp_host, self.config.smtp_port, timeout=30) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(self.config.sender_email, self.config.smtp_auth_code)
+                    server.send_message(msg)
+            return {
+                "success": True,
+                "recipients": masked,
+                "subject": mail_subject,
+                "error": "",
+                "dry_run": False,
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "recipients": masked,
+                "subject": mail_subject,
+                "error": str(exc),
+                "dry_run": False,
+            }

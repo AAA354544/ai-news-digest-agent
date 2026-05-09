@@ -13,26 +13,30 @@ class RSSFetcher(BaseFetcher):
     def __init__(self, source_config: SourceConfig | dict[str, Any]) -> None:
         super().__init__(source_config)
 
-    def fetch(self) -> list[CandidateNews]:
+    def fetch(self, topic: str | None = None) -> list[CandidateNews]:
         endpoint = (self.source_config.url_or_endpoint or '').strip()
         if is_placeholder_url(endpoint):
-            print(f"[RSSFetcher] skip placeholder endpoint: {self.source_config.name}")
+            self.set_health('skipped_placeholder', 'placeholder endpoint')
             return []
-        max_items = self.source_config.max_items or 30
+
+        result = safe_get(
+            endpoint,
+            timeout=self.source_config.timeout_seconds,
+            max_retries=self.source_config.max_retries,
+            request_interval_seconds=self.source_config.request_interval_seconds,
+        )
+        if result.response is None:
+            self.set_health(result.status, result.note)
+            return []
 
         try:
-            resp = safe_get(endpoint, timeout=20, max_retries=2)
-            if resp is None:
-                return []
-            parsed = feedparser.parse(resp.text)
+            parsed = feedparser.parse(result.response.text)
         except Exception as exc:
-            print(f"[RSSFetcher] fetch failed for {self.source_config.name}: {exc}")
+            self.set_health('failed_but_continued', f'feed parse error: {exc}')
             return []
 
-        if getattr(parsed, 'bozo', False):
-            print(f"[RSSFetcher] parse warning for {self.source_config.name}: {getattr(parsed, 'bozo_exception', '')}")
-
         items: list[CandidateNews] = []
+        max_items = self.source_config.max_items or 30
         for entry in getattr(parsed, 'entries', []):
             title = (entry.get('title') or '').strip()
             url = (entry.get('link') or '').strip()
@@ -55,9 +59,11 @@ class RSSFetcher(BaseFetcher):
                     published_at=published,
                     summary_or_snippet=summary,
                     content_text=None,
-                    tags_hint=[],
+                    tags_hint=list(self.source_config.tags),
                 )
             )
             if len(items) >= max_items:
                 break
+
+        self.set_health('ok' if items else 'empty', f'items={len(items)}')
         return items

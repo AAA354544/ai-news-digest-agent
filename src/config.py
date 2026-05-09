@@ -42,14 +42,40 @@ DEFAULT_DIGEST_POLICY: dict[str, Any] = {
 class AppConfig(BaseModel):
     digest_topic: str = Field(default='AI')
     digest_lookback_hours: int = Field(default=24)
-    max_llm_candidates: int = Field(default=50)
+
+    # candidate pool controls
+    max_raw_candidates: int = Field(default=300)
+    max_cluster_input_candidates: int = Field(default=120)
+    max_llm_events: int = Field(default=50)
+    appendix_max_items: int = Field(default=30)
+    max_llm_candidates: int = Field(default=50)  # backward-compatible alias
+
     main_digest_min_items: int = Field(default=10)
     main_digest_max_items: int = Field(default=15)
 
+    # LLM pipeline mode
+    llm_pipeline_mode: str = Field(default='single')
+    llm_preprocess_enabled: bool = Field(default=False)
+    llm_preprocess_provider: str = Field(default='zhipu')
+    llm_preprocess_model: str = Field(default='')
+    llm_final_provider: str = Field(default='zhipu')
+    llm_final_model: str = Field(default='')
+    llm_repair_provider: str = Field(default='zhipu')
+    llm_repair_model: str = Field(default='')
+
+    # provider
     llm_provider: str = Field(default='zhipu')
     zhipu_api_key: str = Field(default='')
     zhipu_base_url: str = Field(default='https://open.bigmodel.cn/api/paas/v4/')
     zhipu_model: str = Field(default='')
+
+    deepseek_api_key: str = Field(default='')
+    deepseek_base_url: str = Field(default='')
+    deepseek_model: str = Field(default='')
+
+    qwen_api_key: str = Field(default='')
+    qwen_base_url: str = Field(default='')
+    qwen_model: str = Field(default='')
 
     github_token: str = Field(default='')
 
@@ -59,29 +85,78 @@ class AppConfig(BaseModel):
     sender_email: str = Field(default='')
     smtp_auth_code: str = Field(default='')
     recipient_email: str = Field(default='')
+    recipient_emails: str = Field(default='')
+    max_recipients_per_run: int = Field(default=5)
+    send_email: bool = Field(default=False)
+    dry_run: bool = Field(default=False)
 
     default_send_time: str = Field(default='22:00')
     timezone: str = Field(default='Asia/Shanghai')
 
 
+_BOOL_TRUE = {'1', 'true', 'yes', 'on'}
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in _BOOL_TRUE
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
 def load_app_config() -> AppConfig:
+    max_llm_candidates = _env_int('MAX_LLM_CANDIDATES', 50)
+    max_llm_events = _env_int('MAX_LLM_EVENTS', max_llm_candidates)
+
     return AppConfig(
         digest_topic=os.getenv('DIGEST_TOPIC', 'AI'),
-        digest_lookback_hours=int(os.getenv('DIGEST_LOOKBACK_HOURS', '24')),
-        max_llm_candidates=int(os.getenv('MAX_LLM_CANDIDATES', '50')),
-        main_digest_min_items=int(os.getenv('MAIN_DIGEST_MIN_ITEMS', '10')),
-        main_digest_max_items=int(os.getenv('MAIN_DIGEST_MAX_ITEMS', '15')),
+        digest_lookback_hours=_env_int('DIGEST_LOOKBACK_HOURS', 24),
+        max_raw_candidates=_env_int('MAX_RAW_CANDIDATES', 300),
+        max_cluster_input_candidates=_env_int('MAX_CLUSTER_INPUT_CANDIDATES', 120),
+        max_llm_events=max_llm_events,
+        appendix_max_items=_env_int('APPENDIX_MAX_ITEMS', 30),
+        max_llm_candidates=max_llm_candidates,
+        main_digest_min_items=_env_int('MAIN_DIGEST_MIN_ITEMS', 10),
+        main_digest_max_items=_env_int('MAIN_DIGEST_MAX_ITEMS', 15),
+        llm_pipeline_mode=os.getenv('LLM_PIPELINE_MODE', 'single').strip().lower(),
+        llm_preprocess_enabled=_env_bool('LLM_PREPROCESS_ENABLED', False),
+        llm_preprocess_provider=os.getenv('LLM_PREPROCESS_PROVIDER', 'zhipu'),
+        llm_preprocess_model=os.getenv('LLM_PREPROCESS_MODEL', ''),
+        llm_final_provider=os.getenv('LLM_FINAL_PROVIDER', 'zhipu'),
+        llm_final_model=os.getenv('LLM_FINAL_MODEL', ''),
+        llm_repair_provider=os.getenv('LLM_REPAIR_PROVIDER', 'zhipu'),
+        llm_repair_model=os.getenv('LLM_REPAIR_MODEL', ''),
         llm_provider=os.getenv('LLM_PROVIDER', 'zhipu'),
         zhipu_api_key=os.getenv('ZHIPU_API_KEY', ''),
         zhipu_base_url=os.getenv('ZHIPU_BASE_URL', 'https://open.bigmodel.cn/api/paas/v4/'),
         zhipu_model=os.getenv('ZHIPU_MODEL', ''),
+        deepseek_api_key=os.getenv('DEEPSEEK_API_KEY', ''),
+        deepseek_base_url=os.getenv('DEEPSEEK_BASE_URL', ''),
+        deepseek_model=os.getenv('DEEPSEEK_MODEL', ''),
+        qwen_api_key=os.getenv('QWEN_API_KEY', ''),
+        qwen_base_url=os.getenv('QWEN_BASE_URL', ''),
+        qwen_model=os.getenv('QWEN_MODEL', ''),
         github_token=os.getenv('GITHUB_TOKEN', ''),
         smtp_host=os.getenv('SMTP_HOST', 'smtp.qq.com'),
-        smtp_port=int(os.getenv('SMTP_PORT', '465')),
-        smtp_use_ssl=os.getenv('SMTP_USE_SSL', 'true').strip().lower() in {'1', 'true', 'yes', 'on'},
+        smtp_port=_env_int('SMTP_PORT', 465),
+        smtp_use_ssl=_env_bool('SMTP_USE_SSL', True),
         sender_email=os.getenv('SENDER_EMAIL', ''),
         smtp_auth_code=os.getenv('SMTP_AUTH_CODE', ''),
         recipient_email=os.getenv('RECIPIENT_EMAIL', ''),
+        recipient_emails=os.getenv('RECIPIENT_EMAILS', ''),
+        max_recipients_per_run=_env_int('MAX_RECIPIENTS_PER_RUN', 5),
+        send_email=_env_bool('SEND_EMAIL', False),
+        dry_run=_env_bool('DRY_RUN', False),
         default_send_time=os.getenv('DEFAULT_SEND_TIME', '22:00'),
         timezone=os.getenv('TIMEZONE', 'Asia/Shanghai'),
     )

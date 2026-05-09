@@ -4,59 +4,41 @@
     region: international
     language: en
     category: official_blog
+    content_type: company_blog
+    priority: 9
     url_or_endpoint: "https://openai.com/news/rss.xml"
     max_items: 30
     enabled: true
+    tags: ["openai", "official"]
+    keywords: ["AI", "model", "agent"]
     notes: "Public RSS feed."
-
-  - name: Google DeepMind Blog
-    type: rss_or_web
-    region: international
-    language: en
-    category: ai_company
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
-
-  - name: Anthropic News
-    type: rss_or_web
-    region: international
-    language: en
-    category: ai_company
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
 
   - name: Microsoft AI Blog
     type: rss
     region: international
     language: en
     category: ai_company
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "https://blogs.microsoft.com/ai/feed/"
     max_items: 20
     enabled: true
+    tags: ["microsoft", "official"]
+    keywords: ["copilot", "azure ai"]
     notes: "Public RSS feed."
-
-  - name: Meta AI Blog
-    type: rss_or_web
-    region: international
-    language: en
-    category: ai_company
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
 
   - name: NVIDIA Blog
     type: rss
     region: international
     language: en
     category: infra_chip
+    content_type: company_blog
+    priority: 8
     url_or_endpoint: "https://blogs.nvidia.com/feed/"
     max_items: 20
     enabled: true
+    tags: ["nvidia", "gpu"]
+    keywords: ["chip", "infrastructure", "cuda"]
     notes: "Public RSS feed."
 
   - name: Hugging Face Blog
@@ -64,59 +46,41 @@
     region: international
     language: en
     category: developer_tools
+    content_type: open_source
+    priority: 8
     url_or_endpoint: "https://huggingface.co/blog/feed.xml"
     max_items: 20
     enabled: true
-    notes: "Public RSS feed; timeout tolerated."
-
-  - name: Google AI Blog
-    type: rss_or_web
-    region: international
-    language: en
-    category: official_blog
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
+    tags: ["huggingface", "open source"]
+    keywords: ["model", "dataset", "tooling"]
+    notes: "Public RSS feed."
 
   - name: Simon Willison Blog
     type: rss
     region: international
     language: en
     category: developer_tools
+    content_type: community
+    priority: 7
     url_or_endpoint: "https://simonwillison.net/atom/everything/"
     max_items: 20
     enabled: true
-    notes: "Public Atom feed; useful for AI developer tooling trends."
-
-  - name: Latent Space
-    type: rss_or_web
-    region: international
-    language: en
-    category: developer_tools
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
-
-  - name: Papers with Code Trending
-    type: rss_or_web
-    region: international
-    language: en
-    category: research
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable public feed endpoint."
+    tags: ["developer", "community"]
+    keywords: ["llm", "agent", "tool"]
+    notes: "Public Atom feed."
 
   - name: Hacker News AI Search
     type: hn_algolia
     region: international
     language: en
     category: ai_media
+    content_type: community
+    priority: 7
     url_or_endpoint: "https://hn.algolia.com/api/v1/search_by_date"
     max_items: 60
     enabled: true
+    tags: ["hn", "community"]
+    keywords: ["AI", "LLM", "Agent"]
     notes: "Stable API endpoint."
 
   - name: arXiv AI/CL
@@ -124,9 +88,13 @@
     region: international
     language: en
     category: research
+    content_type: research
+    priority: 8
     url_or_endpoint: "http://export.arxiv.org/api/query"
     max_items: 20
     enabled: true
+    tags: ["arxiv", "paper"]
+    keywords: ["cs.AI", "cs.CL", "cs.LG"]
     notes: "Stable API endpoint with polite pacing."
 
   - name: GitHub Trending AI
@@ -134,9 +102,13 @@
     region: international
     language: en
     category: open_source_project
+    content_type: open_source
+    priority: 7
     url_or_endpoint: "https://github.com/trending"
     max_items: 10
     enabled: true
+    tags: ["github", "open source"]
+    keywords: ["ai", "llm", "agent"]
     notes: "Public trending page."
 
   - name: TechCrunch AI
@@ -144,97 +116,149 @@
     region: international
     language: en
     category: ai_media
+    content_type: media
+    priority: 7
     url_or_endpoint: "https://techcrunch.com/tag/artificial-intelligence/feed/"
     max_items: 20
     enabled: true
+    tags: ["media"]
+    keywords: ["ai company", "product"]
     notes: "Public RSS feed."
-
-  - name: VentureBeat AI
-    type: rss
-    region: international
-    language: en
-    category: ai_media
-    url_or_endpoint: "https://venturebeat.com/ai/feed/"
-    max_items: 20
-    enabled: false
-    notes: "RSS endpoint returned 404; needs verification."
-
-  - name: The Decoder
-    type: rss_or_web
-    region: international
-    language: en
-    category: ai_media
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify stable feed endpoint."
 
   - name: MIT Technology Review AI
     type: rss
     region: international
     language: en
     category: ai_media
+    content_type: media
+    priority: 7
     url_or_endpoint: "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
     max_items: 20
     enabled: true
+    tags: ["media"]
+    keywords: ["ai policy", "industry"]
     notes: "Public topic feed."
 
-  - name: 量子位
-    type: rss_or_web
+  - name: 36氪
+    type: rss
     region: chinese
     language: zh
     category: ai_media
-    url_or_endpoint: "TODO"
+    content_type: media
+    priority: 6
+    url_or_endpoint: "https://36kr.com/feed"
     max_items: 20
-    enabled: false
-    notes: "TODO: verify public feed or compliant endpoint."
+    enabled: true
+    tags: ["中文", "产业"]
+    keywords: ["人工智能", "大模型", "智能体"]
+    notes: "General tech feed that often includes AI/LLM updates."
+
+  - name: InfoQ 中文
+    type: rss
+    region: chinese
+    language: zh
+    category: ai_media
+    content_type: media
+    priority: 6
+    url_or_endpoint: "https://www.infoq.cn/feed"
+    max_items: 20
+    enabled: true
+    tags: ["中文", "开发者"]
+    keywords: ["AI", "大模型", "工程"]
+    notes: "General engineering feed with AI coverage."
+
+  - name: 量子位
+    type: rss
+    region: chinese
+    language: zh
+    category: ai_media
+    content_type: media
+    priority: 7
+    url_or_endpoint: "https://www.qbitai.com/feed"
+    max_items: 20
+    enabled: true
+    tags: ["中文", "ai 媒体"]
+    keywords: ["人工智能", "大模型"]
+    notes: "Public feed endpoint; if unstable, set enabled=false."
 
   - name: 机器之心
-    type: rss_or_web
+    type: rss
     region: chinese
     language: zh
     category: ai_media
-    url_or_endpoint: "TODO"
+    content_type: media
+    priority: 7
+    url_or_endpoint: "https://www.jiqizhixin.com/rss"
     max_items: 20
-    enabled: false
-    notes: "TODO: verify public feed or compliant endpoint."
+    enabled: true
+    tags: ["中文", "ai 媒体"]
+    keywords: ["机器学习", "大模型"]
+    notes: "Public feed endpoint; if unstable, set enabled=false."
 
   - name: 智谱 AI 官方
     type: rss_or_web
     region: chinese
     language: zh
     category: official_blog
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
-    notes: "TODO: verify official public endpoint."
+    tags: ["中文", "官方"]
+    keywords: ["智谱", "GLM"]
+    notes: "TODO: verify stable official feed endpoint."
 
-  - name: DeepSeek 官方
+  - name: Kimi 官方
     type: rss_or_web
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
-    notes: "TODO: verify official public endpoint."
+    tags: ["中文", "官方"]
+    keywords: ["Kimi", "月之暗面"]
+    notes: "TODO: verify stable official feed endpoint."
 
   - name: 通义千问官方
     type: rss_or_web
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
-    notes: "TODO: verify official public endpoint."
+    tags: ["中文", "官方"]
+    keywords: ["通义", "Qwen"]
+    notes: "TODO: verify stable official endpoint."
 
   - name: 百度智能云 AI 官方
     type: rss_or_web
     region: chinese
     language: zh
     category: ai_company
+    content_type: company_blog
+    priority: 6
     url_or_endpoint: "TODO"
     max_items: 20
     enabled: false
-    notes: "TODO: verify official public endpoint."
+    tags: ["中文", "官方"]
+    keywords: ["文心", "百度"]
+    notes: "TODO: verify stable official endpoint."
+
+  - name: VentureBeat AI
+    type: rss
+    region: international
+    language: en
+    category: ai_media
+    content_type: media
+    priority: 5
+    url_or_endpoint: "https://venturebeat.com/ai/feed/"
+    max_items: 20
+    enabled: false
+    notes: "RSS endpoint returned 404; needs verification."

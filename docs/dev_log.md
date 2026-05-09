@@ -255,3 +255,57 @@ Polish project presentation and improve source diversity/operability without cha
 
 ### Status
 Pending verification
+
+## Long-run Architecture Optimization - Topic Override, Event Clustering, and Layered LLM
+
+### Problems Before
+- Streamlit topic input did not effectively control final digest topic.
+- Chinese sources were mostly placeholders, so chinese_count often stayed 0.
+- Candidate pool stages were unclear and too aggressively reduced too early.
+- URL dedup existed, but same-event multi-source merging was weak.
+- Prompt behavior was closer to news-list selection than event-level intelligence.
+- Single-pass LLM flow had limited fallback structure.
+
+### What Was Implemented
+- Topic override wired from UI/CLI into fetch/analyze and final digest topic field.
+- Candidate pool stages clarified and controlled via new config limits.
+- Deterministic event clustering module added (`event_clusterer.py`) with source-evidence merge.
+- Layered mode support added with graceful fallback to candidate mode.
+- Prompt upgraded for event-level synthesis and multi-source merged reporting.
+- Chinese source config expanded with enabled public feeds plus disabled TODO official sources.
+
+### Compatibility
+- Kept DailyDigest output schema compatible.
+- Retained JSON repair / payload normalization / fallback behavior.
+- Preserved report generation and email path contracts.
+
+### Verification
+- `python tests/manual_test_fetchers.py`
+- `python tests/manual_test_event_clusterer.py`
+- `python tests/manual_test_pipeline.py`
+- `python tests/manual_test_report.py`
+- `python tests/manual_test_email.py`
+
+### Status
+Pending verification
+
+## Streamlit Interaction & Email Send Fix
+
+### Scope
+- Audited all Streamlit controls (topic, llm limit, send-email checkbox, dry-run, run buttons, refresh, downloads).
+- Fixed UI-to-backend parameter pass-through.
+- Added explicit email result feedback and SMTP missing-variable messaging.
+- Added pipeline return enrichment for UI summary rendering.
+
+### Fixes
+- `topic_input` now consistently flows into pipeline + analyzer.
+- `llm limit` now consistently flows into analyze step.
+- `send email` now returns structured result and UI feedback instead of silent behavior.
+- Added `dry_run` pass-through for Streamlit-triggered email.
+- Added pipeline summary and source health path to pipeline outputs.
+- Added `manual_test_streamlit_logic.py` for non-browser interaction verification.
+
+### Result
+- Streamlit email behavior is now observable (`success/error/recipients/dry_run`).
+- Missing SMTP config is shown as readable env var checklist.
+- Download buttons remain functional after generation.

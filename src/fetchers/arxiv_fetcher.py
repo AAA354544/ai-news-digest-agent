@@ -4,11 +4,10 @@ import time
 from typing import Any
 
 import feedparser
-import requests
 
 from src.fetchers.base import BaseFetcher
 from src.models import CandidateNews, SourceConfig
-from src.utils.http_utils import build_default_headers
+from src.utils.http_utils import safe_get
 
 
 class ArxivFetcher(BaseFetcher):
@@ -17,6 +16,9 @@ class ArxivFetcher(BaseFetcher):
         'cat:cs.AI',
         'cat:cs.CL',
         'cat:cs.LG',
+        'cat:cs.CV',
+        'cat:cs.IR',
+        'cat:stat.ML',
         'all:large language model',
         'all:agent',
         'all:retrieval augmented generation',
@@ -27,12 +29,19 @@ class ArxivFetcher(BaseFetcher):
         self.queries = queries or self.DEFAULT_QUERIES
         self.max_results_per_query = max(1, min(max_results_per_query, 20))
 
-    def fetch(self) -> list[CandidateNews]:
+    def _resolve_queries(self, topic: str | None) -> list[str]:
+        if topic and topic.strip():
+            topic_query = f'all:{topic.strip()}'
+            return [topic_query] + self.queries
+        return self.queries
+
+    def fetch(self, topic: str | None = None) -> list[CandidateNews]:
         items: list[CandidateNews] = []
         seen_urls: set[str] = set()
         max_items = self.source_config.max_items or 20
 
-        for query in self.queries:
+        last_status = 'ok'
+        for query in self._resolve_queries(topic):
             if len(items) >= max_items:
                 break
 
@@ -44,27 +53,23 @@ class ArxivFetcher(BaseFetcher):
                 'sortOrder': 'descending',
             }
 
-            try:
-                resp = requests.get(self.API_ENDPOINT, params=params, timeout=20, headers=build_default_headers())
-            except requests.Timeout:
-                print(f"[ArxivFetcher] timeout: {query}")
-                continue
-            except requests.RequestException as exc:
-                print(f"[ArxivFetcher] request error ({query}): {exc}")
-                continue
-
-            if resp.status_code == 429:
-                print(f"[ArxivFetcher] rate limited (429) on query '{query}'. Stop remaining arXiv queries.")
-                break
-            if resp.status_code in {403, 404}:
-                print(f"[ArxivFetcher] HTTP {resp.status_code} on query '{query}'.")
+            result = safe_get(
+                self.API_ENDPOINT,
+                params=params,
+                timeout=self.source_config.timeout_seconds,
+                max_retries=self.source_config.max_retries,
+                request_interval_seconds=max(2.0, self.source_config.request_interval_seconds),
+            )
+            if result.response is None:
+                last_status = result.status
+                if result.status == 'rate_limited':
+                    break
                 continue
 
             try:
-                resp.raise_for_status()
-                parsed = feedparser.parse(resp.text)
+                parsed = feedparser.parse(result.response.text)
             except Exception as exc:
-                print(f"[ArxivFetcher] parse/response failed ({query}): {exc}")
+                last_status = f'parse_error:{exc}'
                 continue
 
             for entry in getattr(parsed, 'entries', []):
@@ -98,7 +103,7 @@ class ArxivFetcher(BaseFetcher):
                 if len(items) >= max_items:
                     break
 
-            if len(items) < max_items:
-                time.sleep(2.0)
+            time.sleep(max(1.5, self.source_config.request_interval_seconds))
 
+        self.set_health('ok' if items else ('empty' if last_status == 'ok' else last_status), f'items={len(items)}')
         return items

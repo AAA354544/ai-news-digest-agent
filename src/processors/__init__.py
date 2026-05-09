@@ -16,6 +16,7 @@ from src.processors.deduplicator import (
     rank_candidates_lightweight,
     trim_candidates,
 )
+from src.processors.event_clusterer import cluster_candidates_into_events, limit_clusters
 
 try:
     from src.processors.llm_client import LLMClient
@@ -36,6 +37,8 @@ __all__ = [
     'balance_candidates_by_source_type',
     'analyze_candidates_with_llm',
     'save_digest',
+    'cluster_candidates_into_events',
+    'limit_clusters',
 ]
 
 if LLMClient is not None:
