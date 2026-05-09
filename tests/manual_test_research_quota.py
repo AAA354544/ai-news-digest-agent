@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config import AppConfig
 from src.models import CandidateNews, CategoryGroup, DailyDigest, DigestNewsItem, SourceStatistics
+from src.processors.analyzer import apply_research_fallback_to_digest
 from src.processors.digest_quality import enforce_digest_quality_policy
 
 
@@ -130,6 +131,58 @@ def main() -> None:
     candidates3.extend(_candidate(f't{i}', f'Agent tool update {i}', 'GitHub Trending AI', 'github_trending') for i in range(1, 5))
     digest3, metrics3 = enforce_digest_quality_policy(digest3, cfg, candidates3)
     assert metrics3.get('selected_research_count', 0) >= 1, 'arxiv URL from HN should be recognized as research'
+    assert metrics3.get('selected_research_count', 0) + metrics3.get('appendix_research_count', 0) >= 1, 'research should not drop to zero when arxiv-like evidence exists'
+
+    # Plain GitHub repo with "memory/benchmark" keywords should still not be treated as strict research.
+    gh_memory_item = _item(
+        'agent memory benchmark toolkit',
+        'GitHub Trending AI',
+        'https://github.com/example/agent-memory-toolkit',
+        summary='engineering toolkit for agent memory',
+        tags=['agent', 'memory', 'benchmark'],
+    )
+    digest4 = DailyDigest(
+        date='2026-05-09',
+        topic='AI agents',
+        main_digest=[CategoryGroup(category_name='论文与科研进展', items=[gh_memory_item])],
+        appendix=[],
+        source_statistics=SourceStatistics(),
+    )
+    candidates4 = [_candidate('g1', gh_memory_item.title, 'GitHub Trending AI', 'github_trending')]
+    digest4, metrics4 = enforce_digest_quality_policy(digest4, cfg, candidates4)
+    assert metrics4.get('selected_research_count', 0) == 0, 'plain github repo should not be strict research'
+
+    # Analyzer-level fallback should preserve at least one research item when arXiv candidate exists.
+    digest5 = DailyDigest(
+        date='2026-05-09',
+        topic='AI agents',
+        main_digest=[CategoryGroup(category_name='Agent 与 AI 工具', items=tool_items[:10])],
+        appendix=[],
+        source_statistics=SourceStatistics(),
+    )
+    metrics5 = {
+        'selected_research_count': 0,
+        'appendix_research_count': 0,
+        'research_quota_met': False,
+        'research_shortage_reason': 'insufficient_research_candidates:0<3',
+    }
+    candidates5 = [
+        CandidateNews(
+            id='arxiv-fallback-1',
+            title='Agent memory reasoning with long context',
+            url='https://arxiv.org/abs/2601.12345',
+            source_name='arXiv AI/CL',
+            source_type='arxiv',
+            region='international',
+            language='en',
+            category_hint='academic_paper',
+            summary_or_snippet='A paper on agent memory and long-context reasoning.',
+        )
+    ]
+    digest5, metrics5 = apply_research_fallback_to_digest(digest5, candidates5, cfg, metrics5)
+    assert metrics5.get('selected_research_count', 0) + metrics5.get('appendix_research_count', 0) >= 1
+    assert metrics5.get('selected_research_count', 0) >= 1, 'fallback should prefer inserting at least one research item into main digest when possible'
+    assert metrics5.get('research_shortage_reason') != 'insufficient_research_candidates:0<3'
 
     selected_urls = {u for g in digest.main_digest for it in g.items for u in it.links}
     for ap in digest.appendix:

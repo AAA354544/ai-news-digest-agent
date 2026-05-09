@@ -57,13 +57,22 @@ _RESEARCH_HINTS = (
 
 
 def _is_research_candidate(item: CandidateNews) -> bool:
-    if item.source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'}:
+    source_type = (item.source_type or '').lower()
+    if source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code', 'academic_paper', 'research'}:
         return True
     category = (item.category_hint or '').lower()
     if category in {'academic_paper', 'research'}:
         return True
+    url = (item.url or '').lower()
+    if any(d in url for d in ('arxiv.org/abs/', 'semanticscholar.org', 'doi.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com')):
+        return True
+    source_name = (item.source_name or '').lower()
+    if any(k in source_name for k in ('arxiv', 'semantic scholar', 'openreview', 'acl anthology', 'papers with code')):
+        return True
+    if 'github.com' in url:
+        return False
     text = f"{item.title} {item.summary_or_snippet or ''}".lower()
-    return any(k in text for k in _RESEARCH_HINTS)
+    return any(k in text for k in _RESEARCH_HINTS) and ('paper' in text or 'arxiv' in text)
 
 
 def normalize_url(url: str) -> str:
@@ -150,5 +159,20 @@ def prepare_llm_candidates(
             if len(selected) >= max_candidates:
                 break
             selected.append(item)
+
+    # Research preservation lane: if raw/cleaned already has strict research, keep at least a small floor.
+    strict_research_pool = [x for x in ranked if _is_research_candidate(x)]
+    min_research_floor = min(3, len(strict_research_pool), max_candidates)
+    if min_research_floor > 0:
+        selected_research = [x for x in selected if _is_research_candidate(x)]
+        if len(selected_research) < min_research_floor:
+            need = min_research_floor - len(selected_research)
+            add_pool = [x for x in strict_research_pool if all(x.id != y.id for y in selected)]
+            removable = [x for x in selected if not _is_research_candidate(x)]
+            remove_count = min(need, len(add_pool), len(removable))
+            if remove_count > 0:
+                for rem in removable[:remove_count]:
+                    selected = [x for x in selected if x.id != rem.id]
+                selected.extend(add_pool[:remove_count])
 
     return trim_candidates(selected, max_candidates=max_candidates)

@@ -97,6 +97,8 @@ class SourceStatistics(BaseModel):
     final_model_used: Optional[str] = None
     final_fallback_used: Optional[bool] = None
     final_fallback_reason: Optional[str] = None
+    main_backfill_used: Optional[bool] = None
+    main_backfill_count: Optional[int] = None
 
 
 class DailyDigest(BaseModel):

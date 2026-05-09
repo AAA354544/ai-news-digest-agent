@@ -16,6 +16,9 @@ data/digested/*
 data/cache/*
 !data/cache/.gitkeep
 
+data/clustered/*
+!data/clustered/.gitkeep
+
 outputs/markdown/*
 !outputs/markdown/.gitkeep
 

@@ -14,23 +14,41 @@ from src.utils.source_health import save_source_health
 
 
 def _is_research_candidate(candidate: CandidateNews) -> bool:
-    if candidate.source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'}:
+    if candidate.source_type in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code', 'academic_paper', 'research'}:
         return True
     category = (candidate.category_hint or '').lower()
     if category in {'academic_paper', 'research'}:
         return True
-    text = f"{candidate.title} {candidate.summary_or_snippet or ''}".lower()
-    return any(k in text for k in ('paper', 'arxiv', 'benchmark', 'research', 'doi', 'agent memory', 'tool use'))
+    url = (candidate.url or '').lower()
+    source_name = (candidate.source_name or '').lower()
+    tags = ' '.join(candidate.tags_hint or []).lower()
+    research_domains = ('arxiv.org', 'doi.org', 'semanticscholar.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com')
+    if any(d in url for d in research_domains):
+        return True
+    if any(k in source_name for k in ('arxiv', 'semantic scholar', 'openreview', 'acl anthology', 'papers with code')):
+        return True
+    if 'github.com' in url:
+        return False
+    if any(k in tags for k in ('arxiv', 'paper', 'research', 'academic_paper', 'doi')):
+        return True
+    return False
 
 
 def _is_research_cluster(cluster: EventCluster) -> bool:
-    if any(x in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code'} for x in cluster.source_types):
+    if any(x in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code', 'academic_paper', 'research'} for x in cluster.source_types):
         return True
     category = (cluster.category_hint or '').lower()
     if category in {'academic_paper', 'research'}:
         return True
-    title = (cluster.representative_title or '').lower()
-    return any(k in title for k in ('paper', 'arxiv', 'benchmark', 'agent memory', 'tool use'))
+    links_text = ' '.join(cluster.links or []).lower()
+    if any(d in links_text for d in ('arxiv.org', 'doi.org', 'semanticscholar.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com')):
+        return True
+    source_names_text = ' '.join(cluster.source_names or []).lower()
+    if any(k in source_names_text for k in ('arxiv', 'semantic scholar', 'openreview', 'acl anthology', 'papers with code')):
+        return True
+    if 'github.com' in links_text:
+        return False
+    return False
 
 
 def _select_final_clusters_with_research_quota(clusters: list[EventCluster], max_events: int) -> list[EventCluster]:
@@ -440,6 +458,8 @@ def run_full_pipeline(
             "final_fallback_used": stats.get("final_fallback_used"),
             "final_fallback_reason": stats.get("final_fallback_reason"),
             "appendix_shortage_reason": stats.get("appendix_shortage_reason"),
+            "main_backfill_used": stats.get("main_backfill_used"),
+            "main_backfill_count": stats.get("main_backfill_count"),
         }
     except Exception:
         pipeline_summary = {}

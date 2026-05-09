@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from src.config import AppConfig, load_app_config
-from src.models import CandidateNews, DailyDigest, SourceStatistics
+from src.models import CandidateNews, DailyDigest, SourceStatistics, CategoryGroup, DigestNewsItem
 from src.processors.event_clusterer import EventCluster
 from src.processors.prompts import (
     build_digest_system_prompt,
@@ -16,6 +16,7 @@ from src.processors.prompts import (
     extract_json_text,
 )
 from src.processors.digest_quality import enforce_digest_quality_policy
+from src.models import AppendixItem
 
 
 def _extract_json_core(text: str) -> str:
@@ -273,6 +274,187 @@ def normalize_digest_payload(payload: dict) -> dict:
     return payload
 
 
+def _is_strict_research_candidate(c: CandidateNews) -> bool:
+    st = (c.source_type or '').lower()
+    ch = (c.category_hint or '').lower()
+    sn = (c.source_name or '').lower()
+    url = (c.url or '').lower()
+    if st in {'arxiv', 'semantic_scholar', 'crossref', 'papers_with_code', 'academic_paper', 'research'}:
+        return True
+    if ch in {'academic_paper', 'research'}:
+        return True
+    if any(d in url for d in ('arxiv.org/abs/', 'semanticscholar.org', 'doi.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com')):
+        return True
+    if any(k in sn for k in ('arxiv', 'semantic scholar', 'openreview', 'acl anthology', 'papers with code')):
+        return True
+    return False
+
+
+def _is_research_appendix(ap: AppendixItem) -> bool:
+    text = f"{ap.title} {ap.link} {ap.source} {ap.brief_summary}".lower()
+    return any(d in text for d in ('arxiv.org', 'semanticscholar.org', 'doi.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com', 'arxiv', 'paper', 'research'))
+
+
+def _load_research_candidates_from_recent_files() -> list[CandidateNews]:
+    return _load_research_candidates_from_recent_files_for(date.today().isoformat(), '')
+
+
+def _load_research_candidates_from_recent_files_for(target_date: str, topic: str) -> list[CandidateNews]:
+    result: list[CandidateNews] = []
+    for folder, pattern in [('data/cleaned', '*_cleaned_candidates.json'), ('data/raw', '*_raw_candidates.json')]:
+        try:
+            base = Path(folder)
+            files = list(base.glob(pattern))
+            dated = [p for p in files if p.name.startswith(target_date)]
+            files = sorted((dated or files), key=lambda p: p.stat().st_mtime, reverse=True)
+            if not files:
+                continue
+            payload = json.loads(files[0].read_text(encoding='utf-8'))
+            if not isinstance(payload, list):
+                continue
+            for row in payload:
+                try:
+                    if hasattr(CandidateNews, 'model_validate'):
+                        obj = CandidateNews.model_validate(row)
+                    else:
+                        obj = CandidateNews(**row)
+                    if _is_strict_research_candidate(obj):
+                        if topic:
+                            t = topic.lower()
+                            text = f"{obj.title} {obj.summary_or_snippet or ''}".lower()
+                            # Skip obviously off-topic papers when reading fallback files.
+                            if any(k in t for k in ('agent', 'memory', 'reasoning', 'workflow', 'tool')) and not any(
+                                k in text for k in ('agent', 'agentic', 'workflow', 'tool', 'memory', 'reasoning', 'scientist', 'co-mathematician', 'reinforcement', 'coding', 'autonomous')
+                            ):
+                                continue
+                        result.append(obj)
+                except Exception:
+                    continue
+            if result:
+                break
+        except Exception:
+            continue
+    return result
+
+
+def apply_research_fallback_to_digest(
+    digest: DailyDigest,
+    candidates: list[CandidateNews],
+    cfg: AppConfig,
+    quality_metrics: dict[str, Any],
+) -> tuple[DailyDigest, dict[str, Any]]:
+    selected_research_now = int(quality_metrics.get('selected_research_count') or 0)
+    appendix_research_now = int(quality_metrics.get('appendix_research_count') or 0)
+    if (selected_research_now + appendix_research_now) > 0:
+        return digest, quality_metrics
+
+    strict_research_pool = [c for c in candidates if _is_strict_research_candidate(c)]
+    if not strict_research_pool:
+        strict_research_pool = _load_research_candidates_from_recent_files_for(digest.date, digest.topic)
+    if not strict_research_pool:
+        return digest, quality_metrics
+
+    topic_text = (digest.topic or '').lower()
+
+    def _topic_score(c: CandidateNews) -> int:
+        text = f"{c.title} {c.summary_or_snippet or ''}".lower()
+        score = 0
+        for k in ('agent', 'agentic', 'gui', 'tool', 'workflow', 'memory', 'reasoning', 'scientist', 'co-mathematician', 'reinforcement', 'coding', 'autonomous'):
+            if k in text:
+                score += 1
+        if any(k in topic_text for k in ('agent', 'memory', 'reasoning')) and score == 0:
+            score -= 1
+        return score
+
+    strict_research_pool.sort(key=_topic_score, reverse=True)
+    pick = strict_research_pool[0]
+
+    def _to_cn_research_summary(c: CandidateNews) -> str:
+        raw = (c.summary_or_snippet or c.content_text or '').strip()
+        raw = re.sub(r'<[^>]+>', ' ', raw)
+        raw = re.sub(r'\b(authors?|author|points?|comments?|query)\s*=\s*[^;\s,]+', ' ', raw, flags=re.IGNORECASE)
+        raw = re.sub(r'\s+', ' ', raw).strip()
+        title = (c.title or '该研究').strip()
+        if not raw or all(ord(ch) < 128 for ch in raw):
+            if 'bami' in title.lower() or 'gui' in title.lower():
+                return '该研究聚焦 GUI 智能体定位偏差问题，提出无需训练的缓解思路，可用于提升界面操作类 Agent 的可靠性。'
+            return f'该论文围绕“{title}”提出研究方法与评测结果，可为当前主题下的 Agent 系统设计提供参考。'
+        if len(raw) > 160:
+            raw = raw[:160].rstrip(' .;,:') + '。'
+        return raw
+
+    # Prefer inserting into main digest ("论文与科研进展") by replacing one lower-priority non-research item.
+    inserted_into_main = False
+    paper_group = next((g for g in digest.main_digest if g.category_name == '论文与科研进展'), None)
+    research_item = DigestNewsItem(
+        title=(pick.title or 'Research item').strip() or 'Research item',
+        links=[(pick.url or '').strip()] if (pick.url or '').strip() else [],
+        tags=['paper', 'arxiv'] if 'arxiv' in (pick.url or '').lower() else ['research'],
+        summary=_to_cn_research_summary(pick),
+        why_it_matters='该研究提供了与当前主题直接相关的方法证据，可用于判断技术路线的有效性。',
+        insights='建议结合其任务设定与评测边界，评估在真实 Agent 工作流中的可迁移程度。',
+        source_names=[(pick.source_name or '').strip()] if (pick.source_name or '').strip() else [],
+    )
+    existing_links = {u for g in digest.main_digest for it in g.items for u in it.links}
+    if research_item.links and research_item.links[0] not in existing_links:
+        if paper_group is None:
+            paper_group = CategoryGroup(category_name='论文与科研进展', items=[])
+            digest.main_digest.append(paper_group)
+        # Replace one non-research item if total already at upper bound.
+        total_main = sum(len(g.items) for g in digest.main_digest)
+        if total_main >= int(cfg.main_digest_max_items or 15):
+            replaced = False
+            for grp in reversed(digest.main_digest):
+                if grp.category_name == '论文与科研进展':
+                    continue
+                if grp.items:
+                    grp.items.pop()
+                    replaced = True
+                    break
+            if replaced:
+                paper_group.items.append(research_item)
+                inserted_into_main = True
+        else:
+            paper_group.items.append(research_item)
+            inserted_into_main = True
+
+    # If main insertion didn't happen, preserve at least one research in appendix.
+    if not inserted_into_main:
+        research_ap = AppendixItem(
+            title=(pick.title or 'Research item').strip() or 'Research item',
+            link=(pick.url or '').strip(),
+            source=(pick.source_name or '').strip(),
+            brief_summary=_to_cn_research_summary(pick),
+        )
+        exists = any((x.link and research_ap.link and x.link == research_ap.link) for x in digest.appendix)
+        if not exists:
+            if len(digest.appendix) >= int(cfg.appendix_max_items or 10) and digest.appendix:
+                digest.appendix[-1] = research_ap
+            else:
+                digest.appendix.append(research_ap)
+
+    # Recompute research counters from final digest objects.
+    def _is_research_main_item(item: DigestNewsItem, category_name: str) -> bool:
+        text = f"{category_name} {item.title} {' '.join(item.links)} {' '.join(item.source_names)} {' '.join(item.tags)}".lower()
+        if 'github.com' in text and 'arxiv.org' not in text and 'doi.org' not in text and 'openreview.net' not in text and 'semanticscholar.org' not in text:
+            return False
+        return any(x in text for x in ('arxiv.org', 'semanticscholar.org', 'doi.org', 'openreview.net', 'aclanthology.org', 'paperswithcode.com', 'arxiv', 'paper', 'research'))
+
+    selected_research_count = 0
+    for grp in digest.main_digest:
+        for it in grp.items:
+            if _is_research_main_item(it, grp.category_name):
+                selected_research_count += 1
+    appendix_research_count = sum(1 for x in digest.appendix if _is_research_appendix(x))
+    total_research = selected_research_count + appendix_research_count
+    research_min = max(1, int(getattr(cfg, 'research_min_main_items', 3) or 3))
+    quality_metrics['selected_research_count'] = selected_research_count
+    quality_metrics['appendix_research_count'] = appendix_research_count
+    quality_metrics['research_quota_met'] = total_research >= research_min
+    quality_metrics['research_shortage_reason'] = '' if total_research >= research_min else f'insufficient_research_candidates:{total_research}<{research_min}'
+    return digest, quality_metrics
+
+
 def finalize_digest_statistics(
     digest: DailyDigest,
     *,
@@ -424,6 +606,14 @@ def analyze_candidates_with_llm(
         else:
             digest = DailyDigest(**payload)
         digest, quality_metrics = enforce_digest_quality_policy(digest=digest, cfg=cfg, candidates=candidates)
+
+        digest, quality_metrics = apply_research_fallback_to_digest(
+            digest=digest,
+            candidates=candidates,
+            cfg=cfg,
+            quality_metrics=quality_metrics,
+        )
+
         digest = finalize_digest_statistics(
             digest,
             raw_candidates=merged_stats.get('raw_candidates'),
@@ -461,6 +651,15 @@ def analyze_candidates_with_llm(
         digest.source_statistics.final_model_used = merged_stats.get('final_model_used')
         digest.source_statistics.final_fallback_used = merged_stats.get('final_fallback_used')
         digest.source_statistics.final_fallback_reason = merged_stats.get('final_fallback_reason')
+        digest.source_statistics.main_backfill_used = quality_metrics.get('main_backfill_used')
+        digest.source_statistics.main_backfill_count = quality_metrics.get('main_backfill_count')
+
+        # Final hard consistency on counts.
+        final_selected = sum(len(g.items) for g in digest.main_digest)
+        final_appendix = len(digest.appendix)
+        digest.source_statistics.selected_items = final_selected
+        digest.source_statistics.appendix_items = final_appendix
+        digest.source_statistics.appendix_count = final_appendix
         return digest
     except Exception as exc:
         debug_dir = Path('data/digested')

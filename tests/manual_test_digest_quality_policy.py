@@ -33,7 +33,7 @@ def main() -> None:
     candidates: list[CandidateNews] = []
     items: list[DigestNewsItem] = []
 
-    for i in range(1, 10):
+    for i in range(1, 6):
         title = f'International AI model release {i}'
         url = f'https://intl.example.com/ai/{i}'
         items.append(
@@ -59,7 +59,7 @@ def main() -> None:
             )
         )
 
-    for i in range(1, 6):
+    for i in range(1, 4):
         title = f'中文 AI 产业动态 {i}'
         url = f'https://cn.example.cn/ai/{i}'
         items.append(
@@ -86,7 +86,7 @@ def main() -> None:
         )
 
     # additional relevant supplemental items to validate appendix target range
-    for i in range(1, 9):
+    for i in range(1, 3):
         title = f'Agent memory workflow note {i}'
         url = f'https://supplement.example.com/agent-memory/{i}'
         items.append(
@@ -112,6 +112,57 @@ def main() -> None:
             )
         )
 
+    # candidate-only appendix supply (not in LLM main rows) for backfill testing
+    for i in range(1, 9):
+        candidates.append(
+            CandidateNews(
+                id=f'a{i}',
+                title=f'AI supplemental reference {i}',
+                url=f'https://appendix.example.com/ai/{i}',
+                source_name='Appendix Feed',
+                source_type='rss',
+                region='international',
+                language='en',
+                summary_or_snippet='AI supplemental context for readers.',
+            )
+        )
+
+    # Duplicate/conflicting main items should be deduplicated and categorized away from research.
+    agentmemory_url = 'https://github.com/rohitg00/agentmemory'
+    items.append(
+        DigestNewsItem(
+            title='rohitg00/agentmemory',
+            links=[agentmemory_url],
+            tags=['agent', 'memory', 'github'],
+            summary='Open-source agent memory toolkit.',
+            why_it_matters='Useful for workflow prototyping.',
+            insights='Engineering-oriented, not a research paper.',
+            source_names=['GitHub Trending AI'],
+        )
+    )
+    items.append(
+        DigestNewsItem(
+            title='rohitg00/agentmemory',
+            links=[agentmemory_url],
+            tags=['paper', 'benchmark', 'memory'],
+            summary='Duplicate same repo accidentally placed in research category.',
+            why_it_matters='Should not appear twice.',
+            insights='Should be deduplicated.',
+            source_names=['GitHub Trending AI'],
+        )
+    )
+    candidates.append(
+        CandidateNews(
+            id='gh-agentmemory',
+            title='rohitg00/agentmemory',
+            url=agentmemory_url,
+            source_name='GitHub Trending AI',
+            source_type='github_trending',
+            region='international',
+            language='en',
+        )
+    )
+
     # low-value / irrelevant samples should be filtered or kept out of appendix
     items.append(
         DigestNewsItem(
@@ -133,6 +184,28 @@ def main() -> None:
             why_it_matters='none',
             insights='none',
             source_names=['World News'],
+        )
+    )
+    items.append(
+        DigestNewsItem(
+            title='AWS DirtyFrag mitigation note',
+            links=['https://security.example.com/dirtyfrag'],
+            tags=['security'],
+            summary='<div>query=RAG author=test points=99 DirtyFrag mitigation details</div>',
+            why_it_matters='infra',
+            insights='debug',
+            source_names=['Security Feed'],
+        )
+    )
+    items.append(
+        DigestNewsItem(
+            title='Free Solar Radiation and Heat Flux Data Stream',
+            links=['https://weather.example.com/solar-radiation'],
+            tags=['data'],
+            summary='Solar Radiation dashboard',
+            why_it_matters='none',
+            insights='none',
+            source_names=['Weather Feed'],
         )
     )
 
@@ -182,8 +255,16 @@ def main() -> None:
             assert phrase.lower() not in joined, f'appendix should not leak internal phrase: {phrase}'
         assert '<' not in ap.brief_summary and '>' not in ap.brief_summary, 'appendix summary should not contain HTML tags'
         assert 'query=' not in joined and 'author=' not in joined and 'points=' not in joined, 'appendix summary should not contain debug fields'
+        assert len(ap.brief_summary) <= 300, 'appendix brief_summary should be capped'
+        ascii_chars = sum(1 for ch in ap.brief_summary if ord(ch) < 128)
+        assert ascii_chars / max(1, len(ap.brief_summary)) < 0.95, 'appendix summary should not be raw English one-liner'
 
     assert 5 <= appendix_count <= 10, f'appendix should be in 5-10 range when relevant supply is enough, got {appendix_count}'
+    assert metrics.get('main_backfill_used') is True or selected_count >= 10, 'main backfill should fill when initial rows are sparse'
+
+    # Main digest should not include duplicate same repo url across categories.
+    main_links = [u for g in digest.main_digest for it in g.items for u in it.links if u]
+    assert main_links.count(agentmemory_url) <= 1, 'same github repo should not be duplicated in main digest'
 
     print(f'selected_count={selected_count}')
     print(f'appendix_count={appendix_count}')

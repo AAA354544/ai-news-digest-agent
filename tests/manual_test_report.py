@@ -46,6 +46,10 @@ def main() -> None:
     except UnicodeEncodeError:
         safe = preview.encode("gbk", errors="ignore").decode("gbk", errors="ignore")
         print(safe)
+    lower_md = markdown_text.lower()
+    assert 'authors=' not in lower_md, "Markdown should not leak raw authors= snippets"
+    assert 'points=' not in lower_md and 'query=' not in lower_md and 'comments=' not in lower_md, "Markdown should not leak debug snippet fields"
+    assert 'gui grounding is a critical capability' not in lower_md, "Markdown should not keep raw English fallback snippet for research summaries"
     print("Module 5 report generation test completed.")
 
 
