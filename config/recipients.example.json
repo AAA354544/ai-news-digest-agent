@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Me",
+    "email": "example@example.com",
+    "groups": ["default", "self"],
+    "enabled": true,
+    "note": "Personal mailbox"
+  },
+  {
+    "name": "Team Inbox",
+    "email": "team@example.com",
+    "groups": ["default", "team"],
+    "enabled": false,
+    "note": "Disabled sample recipient"
+  }
+]

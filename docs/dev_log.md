@@ -233,6 +233,32 @@ Improve digest quality and source balance toward "AI research progress + AI indu
 ### Status
 Pending verification
 
+## Optimization Round 3 - Recipient Management + Streamlit Email Targeting
+
+### Goal
+Add lightweight recipient management and Streamlit recipient-targeted sending without introducing database/auth/backend complexity.
+
+### Changes
+- Added local JSON recipient manager module: `src/notifiers/recipients.py`.
+- Added local recipient file policy:
+  - local runtime file: `data/recipients.local.json`
+  - committed example file: `config/recipients.example.json`
+  - `.gitignore` updated to block local recipient file commit.
+- Upgraded `EmailSender.send_digest_email(..., recipients=None, subject=None)` to support explicit recipient list while keeping env default behavior.
+- Upgraded pipeline email step to accept optional recipients and preserved old default send flow.
+- Upgraded CLI:
+  - `send-email --to ...`
+  - `send-email --group ...`
+  - `run-pipeline --send-email --to ...`
+  - `run-pipeline --send-email --group ...`
+  - supports merge + dedup when both provided.
+- Upgraded Streamlit with new `Email Recipients` tab:
+  - list/add-update/delete local recipients
+  - send latest digest to selected enabled recipients
+  - send to temporary emails with optional save-to-local.
+- Added manual test: `tests/manual_test_recipients.py`.
+- Updated README and `.env.example` docs for recipient behavior and GitHub Actions compatibility note.
+
 ## Optimization Round 2 - UI, Email, Sources, and Source Health
 
 ### Goal

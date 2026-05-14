@@ -64,6 +64,21 @@ Planned files:
 - `.env`: runtime secrets/config (never commit)
 - `config/sources.yaml`: source definitions and enable flags
 - `config/digest_policy.yaml`: balancing quotas and digest policy
+- `data/recipients.local.json`: local recipients list for Streamlit/CLI recipient management (do not commit real emails)
+- `config/recipients.example.json`: example recipients template committed to repo
+
+## Recipient Management
+- Local recipients file: `data/recipients.local.json`
+- Example file: `config/recipients.example.json`
+- Real mailbox addresses should stay local only and must not be committed to GitHub.
+- If `data/recipients.local.json` is missing, app/CLI falls back gracefully and you can still send via `RECIPIENT_EMAIL`.
+
+## Streamlit Email Sending
+- Open `streamlit run app.py`, then go to `Email Recipients` tab.
+- Add/update/remove recipients in local JSON (name/email/groups/enabled/note).
+- Select enabled recipients and send latest digest directly.
+- Input temporary emails (comma/semicolon/newline separated) and send without saving.
+- Optional: check "Save these recipients" to write temporary emails into local recipients list.
 
 ## Manual Verification
 ```bash
@@ -76,7 +91,15 @@ python tests/manual_test_llm.py
 python tests/manual_test_report.py
 python tests/manual_test_email.py
 python tests/manual_test_pipeline.py
+python tests/manual_test_recipients.py
 streamlit run app.py
+```
+
+## CLI Examples
+```bash
+python cli.py send-email --to a@qq.com,b@qq.com
+python cli.py send-email --group default
+python cli.py run-pipeline --send-email --group default
 ```
 
 ## Limitations
@@ -86,6 +109,11 @@ streamlit run app.py
 - No historical trend RAG in current version.
 - No bypass of login/paywall/captcha/strong anti-bot controls.
 - GitHub Actions requires repository Secrets configuration.
+
+## GitHub Actions Recipient Note
+- GitHub Actions still uses `RECIPIENT_EMAIL` repository secret for scheduled sends.
+- Local `data/recipients.local.json` does not participate in GitHub Actions.
+- If you need cloud-side recipient list management in the future, design separate secure storage first.
 
 ## Roadmap
 - More high-quality sources

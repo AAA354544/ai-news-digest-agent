@@ -6,6 +6,15 @@ from pathlib import Path
 import streamlit as st
 
 from src.config import get_enabled_sources, load_app_config
+from src.notifiers.recipients import (
+    add_or_update_recipient,
+    get_enabled_recipients,
+    load_recipients,
+    parse_email_list,
+    remove_recipient,
+    save_recipients,
+    validate_email,
+)
 from src.pipeline import run_email_step, run_full_pipeline, run_report_step
 from src.utils.source_health import load_latest_source_health
 
@@ -46,6 +55,19 @@ def _latest_report_paths() -> tuple[Path | None, Path | None]:
     return md_path, html_path
 
 
+def _send_to_recipients_ui(selected_emails: list[str]) -> tuple[bool, str]:
+    if not selected_emails:
+        return False, "No recipients selected."
+    md_path, html_path = _latest_report_paths()
+    if md_path is None or html_path is None:
+        return False, "Latest reports not found in outputs/. Please run pipeline first."
+    try:
+        result = run_email_step(recipients=selected_emails)
+        return True, f"Email sent to {result.get('recipient_count', 0)} recipients."
+    except Exception as exc:
+        return False, str(exc)
+
+
 def _extract_counts(md_text: str | None) -> tuple[int | None, int | None]:
     if not md_text:
         return None, None
@@ -75,7 +97,7 @@ def main() -> None:
 
     topic_input, llm_limit, send_email_flag, enabled_source_count = _sidebar_config(cfg)
 
-    tabs = st.tabs(['Latest Digest', 'Run Pipeline', 'History', 'Config & Source Health'])
+    tabs = st.tabs(['Latest Digest', 'Run Pipeline', 'History', 'Config & Source Health', 'Email Recipients'])
 
     with tabs[0]:
         md_path, html_path = _latest_report_paths()
@@ -131,8 +153,8 @@ def main() -> None:
             if st.button('Send Latest Email', use_container_width=True):
                 try:
                     with st.spinner('Sending email...'):
-                        run_email_step()
-                    st.success('Email sent.')
+                        result = run_email_step()
+                    st.success(f"Email sent. recipients={result.get('recipient_count', 0)}")
                 except Exception as exc:
                     st.error('Email send failed.')
                     with st.expander('Error details'):
@@ -181,6 +203,114 @@ def main() -> None:
             st.info('Run fetchers test or pipeline to update source health.')
         else:
             st.dataframe(health, use_container_width=True)
+
+    with tabs[4]:
+        st.subheader('Local Recipient Management')
+        st.caption('Local file: data/recipients.local.json. Do not commit real email addresses to GitHub.')
+        try:
+            recipients = load_recipients()
+        except Exception as exc:
+            st.error(f"Failed to load recipients: {exc}")
+            recipients = []
+
+        if not recipients:
+            st.info('No local recipient list yet. You can add recipients below.')
+        else:
+            st.dataframe(
+                [
+                    {
+                        'name': r.get('name', ''),
+                        'email': r.get('email', ''),
+                        'groups': ','.join(r.get('groups', [])),
+                        'enabled': bool(r.get('enabled', True)),
+                        'note': r.get('note', ''),
+                    }
+                    for r in recipients
+                ],
+                use_container_width=True,
+            )
+
+        st.markdown('---')
+        st.markdown('**Add or Update Recipient**')
+        name_input = st.text_input('Name', key='recipient_name')
+        email_input = st.text_input('Email', key='recipient_email')
+        groups_input = st.text_input('Groups (comma separated)', value='default', key='recipient_groups')
+        note_input = st.text_input('Note', key='recipient_note')
+        enabled_input = st.checkbox('Enabled', value=True, key='recipient_enabled')
+        if st.button('Save Recipient'):
+            email_norm = email_input.strip().lower()
+            if not validate_email(email_norm):
+                st.error('Invalid email format. Example: someone@example.com')
+            else:
+                groups = [g.strip() for g in groups_input.split(',') if g.strip()]
+                recipients = add_or_update_recipient(
+                    recipients,
+                    email=email_norm,
+                    name=name_input,
+                    groups=groups,
+                    enabled=enabled_input,
+                    note=note_input,
+                )
+                save_recipients(recipients)
+                st.success('Recipient saved.')
+                st.rerun()
+
+        st.markdown('---')
+        st.markdown('**Remove Recipient**')
+        all_emails = [str(r.get('email', '')) for r in recipients if r.get('email')]
+        if all_emails:
+            selected_remove = st.selectbox('Select email to remove', options=all_emails)
+            if st.button('Delete Recipient'):
+                recipients = remove_recipient(recipients, selected_remove)
+                save_recipients(recipients)
+                st.success(f'Removed {selected_remove}.')
+                st.rerun()
+        else:
+            st.info('No recipients available to delete.')
+
+        st.markdown('---')
+        st.markdown('**Send Latest Digest to Selected Recipients**')
+        enabled_emails = get_enabled_recipients(recipients)
+        selected_emails = st.multiselect('Enabled recipients', options=enabled_emails)
+        if st.button('Send latest digest to selected recipients'):
+            ok, msg = _send_to_recipients_ui(selected_emails)
+            if ok:
+                st.success(msg)
+            else:
+                st.error(msg)
+
+        st.markdown('---')
+        st.markdown('**Send Latest Digest to Temporary Emails**')
+        temp_text = st.text_area('Temporary emails (comma / semicolon / newline separated)', key='temp_emails')
+        save_temp = st.checkbox('Save these recipients', value=False, key='save_temp_recipients')
+        temp_group = st.text_input('Group for saved temporary recipients', value='temporary', key='temp_group')
+        if st.button('Send latest digest to temporary emails'):
+            parsed = parse_email_list(temp_text)
+            valid = [e for e in parsed if validate_email(e)]
+            invalid = [e for e in parsed if not validate_email(e)]
+            if invalid:
+                st.error(f"Invalid emails: {', '.join(invalid)}")
+            elif not valid:
+                st.error('No valid temporary emails found.')
+            else:
+                ok, msg = _send_to_recipients_ui(valid)
+                if ok:
+                    st.success(msg)
+                    if save_temp:
+                        for email in valid:
+                            recipients = add_or_update_recipient(
+                                recipients,
+                                email=email,
+                                name='',
+                                groups=[temp_group.strip() or 'temporary'],
+                                enabled=True,
+                                note='saved from streamlit temporary send',
+                            )
+                        save_recipients(recipients)
+                        st.success('Temporary recipients saved to local list.')
+                        st.rerun()
+                else:
+                    st.error(msg)
 
 
 if __name__ == '__main__':
