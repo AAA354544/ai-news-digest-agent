@@ -87,6 +87,36 @@ streamlit run app.py
 - No bypass of login/paywall/captcha/strong anti-bot controls.
 - GitHub Actions requires repository Secrets configuration.
 
+## GitHub Actions Daily Email Setup
+- This project supports automatic daily digest generation and email delivery via GitHub Actions.
+- Workflow file: `.github/workflows/daily_digest.yml`
+- Schedule: `UTC 14:17` (about `22:17` in Beijing/Singapore time).
+- Configure repository secrets at: `Settings -> Secrets and variables -> Actions`.
+- Required Secrets:
+  - `DIGEST_TOPIC`
+  - `DIGEST_LOOKBACK_HOURS`
+  - `MAX_LLM_CANDIDATES`
+  - `MAIN_DIGEST_MIN_ITEMS`
+  - `MAIN_DIGEST_MAX_ITEMS`
+  - `LLM_PROVIDER`
+  - `ZHIPU_API_KEY`
+  - `ZHIPU_BASE_URL`
+  - `ZHIPU_MODEL`
+  - `GITHUB_TOKEN`
+  - `SMTP_HOST`
+  - `SMTP_PORT`
+  - `SMTP_USE_SSL`
+  - `SENDER_EMAIL`
+  - `SMTP_AUTH_CODE`
+  - `RECIPIENT_EMAIL`
+  - `DEFAULT_SEND_TIME`
+  - `TIMEZONE`
+- Manual run (`workflow_dispatch`): open `Actions`, choose `Daily AI News Digest`, click `Run workflow`.
+- Logs and outputs:
+  - Open each run in `Actions` to inspect step logs (`Preflight checks`, `Run pipeline and send email`).
+  - Download artifact `digest-outputs-<run_id>` to inspect generated reports under `outputs/`.
+- Note: GitHub Actions `schedule` is not second-level precise. It is suitable for daily reports, not high-precision timing tasks.
+
 ## Roadmap
 - More high-quality sources
 - Better source health dashboard

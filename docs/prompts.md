@@ -97,3 +97,7 @@
 # Final Small Stability Adjustment Prompt Summary
 
 本次仅做两项小修：放宽 Appendix 到 5-10 条高质量补充（仍保持硬过滤），以及 final LLM 在 `glm-4.7-flash` 连续 2 次临时失败后自动回退到 `glm-4-flash-250414`。
+
+# GitHub Actions Daily Email Stability Prompt Summary
+
+本次优化仅聚焦 GitHub Actions 自动发送稳定性：调整 cron 避开整点、增加 concurrency 防重入、增加 timeout 防卡死、增加 preflight 环境检查（不打印 secret 明文）、并在任务结束后上传 `outputs/` artifact 便于下载日报与排障；不改 CLI/pipeline/邮件核心逻辑，不引入数据库或复杂后台。

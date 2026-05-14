@@ -2,12 +2,17 @@
 
 on:
   schedule:
-    - cron: "0 14 * * *"
+    - cron: "17 14 * * *"
   workflow_dispatch:
+
+concurrency:
+  group: daily-ai-news-digest-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run-daily-digest:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +27,58 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Preflight checks
+        env:
+          DIGEST_TOPIC: ${{ secrets.DIGEST_TOPIC }}
+          DIGEST_LOOKBACK_HOURS: ${{ secrets.DIGEST_LOOKBACK_HOURS }}
+          MAX_LLM_CANDIDATES: ${{ secrets.MAX_LLM_CANDIDATES }}
+          MAIN_DIGEST_MIN_ITEMS: ${{ secrets.MAIN_DIGEST_MIN_ITEMS }}
+          MAIN_DIGEST_MAX_ITEMS: ${{ secrets.MAIN_DIGEST_MAX_ITEMS }}
+          LLM_PIPELINE_MODE: ${{ secrets.LLM_PIPELINE_MODE }}
+          LLM_PREPROCESS_ENABLED: ${{ secrets.LLM_PREPROCESS_ENABLED }}
+          LLM_PREPROCESS_PROVIDER: ${{ secrets.LLM_PREPROCESS_PROVIDER }}
+          LLM_PREPROCESS_MODEL: ${{ secrets.LLM_PREPROCESS_MODEL }}
+          ZHIPU_PREPROCESS_API_KEY: ${{ secrets.ZHIPU_PREPROCESS_API_KEY }}
+          LLM_FINAL_PROVIDER: ${{ secrets.LLM_FINAL_PROVIDER }}
+          LLM_FINAL_MODEL: ${{ secrets.LLM_FINAL_MODEL }}
+          ZHIPU_FINAL_API_KEY: ${{ secrets.ZHIPU_FINAL_API_KEY }}
+          LLM_REPAIR_ENABLED: ${{ secrets.LLM_REPAIR_ENABLED }}
+          LLM_REPAIR_PROVIDER: ${{ secrets.LLM_REPAIR_PROVIDER }}
+          LLM_REPAIR_MODEL: ${{ secrets.LLM_REPAIR_MODEL }}
+          ZHIPU_REPAIR_API_KEY: ${{ secrets.ZHIPU_REPAIR_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_BASE_URL: ${{ secrets.ZHIPU_BASE_URL }}
+          ZHIPU_MODEL: ${{ secrets.ZHIPU_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USE_SSL: ${{ secrets.SMTP_USE_SSL }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SMTP_AUTH_CODE: ${{ secrets.SMTP_AUTH_CODE }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          DEFAULT_SEND_TIME: ${{ secrets.DEFAULT_SEND_TIME }}
+          TIMEZONE: ${{ secrets.TIMEZONE }}
+        run: |
+          python --version
+          echo "UTC now: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Local now: $(date +"%Y-%m-%d %H:%M:%S %Z")"
+          echo "Workspace: $(pwd)"
+          REQUIRED_VARS="DIGEST_TOPIC DIGEST_LOOKBACK_HOURS MAX_LLM_CANDIDATES MAIN_DIGEST_MIN_ITEMS MAIN_DIGEST_MAX_ITEMS LLM_PIPELINE_MODE LLM_PREPROCESS_ENABLED LLM_PREPROCESS_PROVIDER LLM_PREPROCESS_MODEL ZHIPU_PREPROCESS_API_KEY LLM_FINAL_PROVIDER LLM_FINAL_MODEL ZHIPU_FINAL_API_KEY LLM_REPAIR_ENABLED LLM_REPAIR_PROVIDER LLM_REPAIR_MODEL ZHIPU_REPAIR_API_KEY LLM_PROVIDER ZHIPU_API_KEY ZHIPU_BASE_URL ZHIPU_MODEL GITHUB_TOKEN SMTP_HOST SMTP_PORT SMTP_USE_SSL SENDER_EMAIL SMTP_AUTH_CODE RECIPIENT_EMAIL DEFAULT_SEND_TIME TIMEZONE"
+          missing=0
+          for var_name in $REQUIRED_VARS; do
+            if [ -z "${!var_name}" ]; then
+              echo "[missing] $var_name"
+              missing=1
+            else
+              echo "[ok] $var_name is set"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Preflight failed: required secrets are missing."
+            exit 1
+          fi
+
       - name: Run pipeline and send email
         env:
           DIGEST_TOPIC: ${{ secrets.DIGEST_TOPIC }}
@@ -29,6 +86,18 @@ jobs:
           MAX_LLM_CANDIDATES: ${{ secrets.MAX_LLM_CANDIDATES }}
           MAIN_DIGEST_MIN_ITEMS: ${{ secrets.MAIN_DIGEST_MIN_ITEMS }}
           MAIN_DIGEST_MAX_ITEMS: ${{ secrets.MAIN_DIGEST_MAX_ITEMS }}
+          LLM_PIPELINE_MODE: ${{ secrets.LLM_PIPELINE_MODE }}
+          LLM_PREPROCESS_ENABLED: ${{ secrets.LLM_PREPROCESS_ENABLED }}
+          LLM_PREPROCESS_PROVIDER: ${{ secrets.LLM_PREPROCESS_PROVIDER }}
+          LLM_PREPROCESS_MODEL: ${{ secrets.LLM_PREPROCESS_MODEL }}
+          ZHIPU_PREPROCESS_API_KEY: ${{ secrets.ZHIPU_PREPROCESS_API_KEY }}
+          LLM_FINAL_PROVIDER: ${{ secrets.LLM_FINAL_PROVIDER }}
+          LLM_FINAL_MODEL: ${{ secrets.LLM_FINAL_MODEL }}
+          ZHIPU_FINAL_API_KEY: ${{ secrets.ZHIPU_FINAL_API_KEY }}
+          LLM_REPAIR_ENABLED: ${{ secrets.LLM_REPAIR_ENABLED }}
+          LLM_REPAIR_PROVIDER: ${{ secrets.LLM_REPAIR_PROVIDER }}
+          LLM_REPAIR_MODEL: ${{ secrets.LLM_REPAIR_MODEL }}
+          ZHIPU_REPAIR_API_KEY: ${{ secrets.ZHIPU_REPAIR_API_KEY }}
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
           ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
           ZHIPU_BASE_URL: ${{ secrets.ZHIPU_BASE_URL }}
@@ -44,3 +113,11 @@ jobs:
           TIMEZONE: ${{ secrets.TIMEZONE }}
         run: |
           python cli.py run-pipeline --send-email
+
+      - name: Upload outputs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-outputs-${{ github.run_id }}
+          path: outputs/
+          if-no-files-found: ignore

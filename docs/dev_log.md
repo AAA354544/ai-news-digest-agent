@@ -423,3 +423,16 @@ Allow preprocess/final/repair stages to use different Zhipu models while keeping
 - Relaxed appendix selection from overly strict behavior (Appendix=0) to target 5-10 high-quality supplemental items.
 - Added final-model fallback: `glm-4.7-flash` retries 2 times on transient errors, then falls back to `glm-4-flash-250414`.
 - Added fallback observability fields (`final_model_used`, `final_fallback_used`, `final_fallback_reason`) and appendix shortage diagnostics.
+
+## Optimization Round - GitHub Actions Daily Email Stability
+
+### Goal
+Stabilize daily automated digest email delivery in GitHub Actions without changing core CLI/pipeline/email architecture.
+
+### Changes
+- Moved cron away from the top of the hour: `0 14 * * *` -> `17 14 * * *` (UTC).
+- Added workflow `concurrency` control to reduce duplicate runs and duplicate emails.
+- Added job-level `timeout-minutes` to avoid long-hanging runs.
+- Added minimal preflight checks (Python version, time, workspace, required env presence without secret value output).
+- Added `outputs/` artifact upload (`if: always()`) for post-run report download and troubleshooting.
+- Updated environment/config documentation for GitHub Actions daily email setup.
