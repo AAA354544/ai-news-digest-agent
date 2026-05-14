@@ -137,22 +137,27 @@ def run_report_step() -> tuple[Path, Path]:
     return save_report_files(digest, markdown_text, html_text, output_base_dir="outputs")
 
 
-def run_email_step() -> None:
+def run_email_step(recipients: list[str] | None = None) -> dict[str, object]:
     from src.notifiers.email_sender import EmailSender
 
     html_path = _find_latest_file("outputs/html", "*-ai-news-digest.html")
     md_path = _find_latest_file("outputs/markdown", "*-ai-news-digest.md")
-    EmailSender().send_digest_email(html_path=html_path, markdown_path=md_path)
+    return EmailSender().send_digest_email(html_path=html_path, markdown_path=md_path, recipients=recipients)
 
 
-def run_full_pipeline(send_email: bool = False, llm_candidate_limit: int | None = None) -> dict[str, Path | None]:
+def run_full_pipeline(
+    send_email: bool = False,
+    llm_candidate_limit: int | None = None,
+    recipients: list[str] | None = None,
+) -> dict[str, Path | dict[str, object] | None]:
     raw_path = run_fetch_step()
     cleaned_path = run_clean_step()
     digest_path = run_analyze_step(limit_for_test=llm_candidate_limit)
     md_path, html_path = run_report_step()
 
+    email_result: dict[str, object] | None = None
     if send_email:
-        run_email_step()
+        email_result = run_email_step(recipients=recipients)
 
     return {
         "raw_path": raw_path,
@@ -160,4 +165,5 @@ def run_full_pipeline(send_email: bool = False, llm_candidate_limit: int | None 
         "digest_path": digest_path,
         "markdown_path": md_path,
         "html_path": html_path,
+        "email_result": email_result,
     }

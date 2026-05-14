@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from src.notifiers.recipients import get_enabled_recipients, load_recipients, parse_email_list
 from src.pipeline import (
     run_analyze_step,
     run_clean_step,
@@ -17,6 +18,24 @@ from src.pipeline import (
 
 app = typer.Typer(help="AI News Digest Agent CLI", invoke_without_command=True)
 console = Console()
+
+
+def _resolve_cli_recipients(to: str | None, group: str | None) -> list[str] | None:
+    collected: list[str] = []
+    if to:
+        collected.extend(parse_email_list(to))
+    if group:
+        recipients_data = load_recipients()
+        collected.extend(get_enabled_recipients(recipients_data, group=group))
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for email in collected:
+        key = email.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(key)
+    return deduped if deduped else None
 
 
 def show_status() -> None:
@@ -70,24 +89,41 @@ def report_cmd() -> None:
 
 
 @app.command("send-email")
-def send_email_cmd() -> None:
+def send_email_cmd(
+    to: Optional[str] = typer.Option(None, "--to", help="Comma/semicolon/newline separated recipient emails."),
+    group: Optional[str] = typer.Option(None, "--group", help="Recipient group name from data/recipients.local.json."),
+) -> None:
     console.print("[cyan]Running email step...[/cyan]")
-    run_email_step()
-    console.print("[green]Email sent.[/green]")
+    recipients = _resolve_cli_recipients(to=to, group=group)
+    if recipients is None:
+        console.print("[yellow]Using default RECIPIENT_EMAIL from environment.[/yellow]")
+    else:
+        console.print(f"[cyan]Resolved recipients: {len(recipients)}[/cyan]")
+    result = run_email_step(recipients=recipients)
+    console.print(f"[green]Email sent.[/green] recipients={result.get('recipient_count')}")
 
 
 @app.command("run-pipeline")
 def run_pipeline_cmd(
     send_email: bool = typer.Option(False, "--send-email", help="Send email after report generation."),
     llm_limit: Optional[int] = typer.Option(None, "--llm-limit", help="LLM candidate limit for this run."),
+    to: Optional[str] = typer.Option(None, "--to", help="Comma/semicolon/newline separated recipient emails."),
+    group: Optional[str] = typer.Option(None, "--group", help="Recipient group name from data/recipients.local.json."),
 ) -> None:
     console.print("[cyan]Running full pipeline...[/cyan]")
-    outputs = run_full_pipeline(send_email=send_email, llm_candidate_limit=llm_limit)
+    recipients = _resolve_cli_recipients(to=to, group=group) if send_email else None
+    if send_email and recipients is None:
+        console.print("[yellow]Using default RECIPIENT_EMAIL from environment.[/yellow]")
+    if send_email and recipients is not None:
+        console.print(f"[cyan]Resolved recipients: {len(recipients)}[/cyan]")
+    outputs = run_full_pipeline(send_email=send_email, llm_candidate_limit=llm_limit, recipients=recipients)
     console.print("[green]Pipeline completed.[/green]")
     for key, value in outputs.items():
         console.print(f"{key}: {value}")
     if send_email:
-        console.print("email: sent")
+        email_result = outputs.get("email_result") if isinstance(outputs, dict) else None
+        count = email_result.get("recipient_count") if isinstance(email_result, dict) else "unknown"
+        console.print(f"email: sent recipients={count}")
 
 
 if __name__ == "__main__":

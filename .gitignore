@@ -18,3 +18,5 @@ outputs/markdown/*
 
 outputs/html/*
 !outputs/html/.gitkeep
+
+data/recipients.local.json

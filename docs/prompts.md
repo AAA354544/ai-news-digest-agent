@@ -37,3 +37,7 @@
 # Optimization Round 2 - UI, Email, Sources, and Source Health Prompt
 
 本次 prompt 目标：优化项目展示与内容源质量，包括 README/Mermaid 修正、Streamlit 展示增强、HTML 邮件模板优化、来源扩展与 source health 汇总，以及更平衡的 LLM 来源策略。
+
+# Optimization Round 3 - Recipients + Streamlit Targeted Send Prompt
+
+本轮目标：在不引入数据库/登录系统/云后端的前提下，新增本地 JSON 收件人管理能力，并打通 CLI 与 Streamlit 的“按选择邮箱发送最新日报”流程；同时保持 GitHub Actions 继续使用 `RECIPIENT_EMAIL` 默认机制，确保兼容与轻量化。
