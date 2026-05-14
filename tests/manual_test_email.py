@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.notifiers.email_sender import EmailSender
+from src.notifiers.recipients import parse_email_list
 
 
 def _find_latest(path: Path, pattern: str) -> Path | None:
@@ -31,6 +32,8 @@ def main() -> None:
     print(f"recipient email: {cfg.recipient_email}")
     print(f"html path: {html_path}")
     print(f"markdown path: {md_path}")
+    temp_recipients = parse_email_list("tester@example.com")
+    print(f"temporary recipient sample (not auto-used unless passed): {temp_recipients}")
 
     try:
         sender.send_digest_email(html_path=html_path, markdown_path=md_path)

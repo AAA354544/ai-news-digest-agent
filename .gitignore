@@ -20,3 +20,5 @@ outputs/html/*
 !outputs/html/.gitkeep
 
 data/recipients.local.json
+data/cache/
+data/clustered/
