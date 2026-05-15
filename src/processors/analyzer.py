@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from datetime import date
@@ -262,6 +263,7 @@ def normalize_digest_payload(payload: dict) -> dict:
             "links": [str(x).strip() for x in links if str(x).strip()],
             "tags": [str(x).strip() for x in tags if str(x).strip()],
             "summary": str(item.get("summary", "")).strip(),
+            "mechanism": str(item.get("mechanism", "")).strip(),
             "why_it_matters": str(item.get("why_it_matters", "")).strip(),
             "insights": str(item.get("insights", "")).strip(),
             "source_names": [str(x).strip() for x in source_names if str(x).strip()],
@@ -338,6 +340,97 @@ def _hn_main_cap(lookback_hours: int) -> int:
     return 8
 
 
+def _appendix_hn_cap(appendix_max: int) -> int:
+    return max(2, min(4, round(max(1, appendix_max) * 0.25)))
+
+
+def _appendix_source_cap(appendix_max: int) -> int:
+    return max(3, round(max(1, appendix_max) * 0.35))
+
+
+def _appendix_source_key(item: AppendixItem) -> str:
+    return (item.source or "unknown").strip().lower() or "unknown"
+
+
+def _is_hn_appendix_item(item: AppendixItem) -> bool:
+    text = f"{item.source} {item.link}".lower()
+    return any(marker in text for marker in _HN_SOURCE_MARKERS)
+
+
+def _appendix_ai_relevance_ok(item: AppendixItem) -> bool:
+    text = f"{item.title} {item.brief_summary} {item.source} {item.link}".lower()
+    positive = (
+        "ai",
+        "artificial intelligence",
+        "llm",
+        "large language model",
+        "model",
+        "agentic",
+        "autonomous",
+        "reasoning",
+        "rag",
+        "mcp",
+        "openai",
+        "claude",
+        "gemini",
+        "arxiv",
+        "benchmark",
+        "machine learning",
+        "neural",
+        "transformer",
+        "人工智能",
+        "大模型",
+        "智能体",
+        "机器学习",
+        "论文",
+        "基准",
+    )
+    weak_agent_context = (
+        "monitoring agent",
+        "logging agent",
+        "metrics agent",
+        "data collection agent",
+        "user agent",
+        "software agent",
+    )
+    if any(phrase in text for phrase in weak_agent_context) and not any(
+        marker in text for marker in ("llm", "ai", "agentic", "openai", "claude", "gemini", "rag", "mcp")
+    ):
+        return False
+    return any(marker in text for marker in positive)
+
+
+def _filter_appendix_quality(items: list[AppendixItem], appendix_max: int) -> list[AppendixItem]:
+    filtered: list[AppendixItem] = []
+    source_counts: Counter[str] = Counter()
+    hn_count = 0
+    hn_cap = _appendix_hn_cap(appendix_max)
+    source_cap = _appendix_source_cap(appendix_max)
+
+    for item in items:
+        link = _normalize_url(item.link)
+        brief = (item.brief_summary or "").strip()
+        if not link or not brief:
+            continue
+        if not _appendix_ai_relevance_ok(item):
+            continue
+
+        source_key = _appendix_source_key(item)
+        is_hn = _is_hn_appendix_item(item)
+        if is_hn and hn_count >= hn_cap:
+            continue
+        if source_counts[source_key] >= source_cap:
+            continue
+
+        filtered.append(item)
+        source_counts[source_key] += 1
+        if is_hn:
+            hn_count += 1
+        if len(filtered) >= appendix_max:
+            break
+    return filtered
+
+
 def _source_distribution_from_digest(digest: DailyDigest) -> dict[str, int]:
     counts: Counter[str] = Counter()
     for group in digest.main_digest:
@@ -382,6 +475,7 @@ def _clean_digest_item(item: Any) -> Any:
     updates = {
         "title": _clean_cn_text(getattr(item, "title", "") or ""),
         "summary": _clean_cn_text(getattr(item, "summary", "") or ""),
+        "mechanism": _clean_cn_text(getattr(item, "mechanism", "") or ""),
         "why_it_matters": _clean_cn_text(getattr(item, "why_it_matters", "") or ""),
         "insights": _clean_cn_text(getattr(item, "insights", "") or ""),
     }
@@ -502,7 +596,7 @@ def enforce_digest_shape(
         if _normalize_url(link)
     }
 
-    filtered_appendix: list[AppendixItem] = []
+    appendix_pool: list[AppendixItem] = []
     seen_appendix_links: set[str] = set()
     overflow_links = {_normalize_url(item.link) for item in overflow_appendix if _normalize_url(item.link)}
     for item in [*overflow_appendix, *[_clean_appendix_item(item) for item in (digest.appendix or [])]]:
@@ -512,10 +606,9 @@ def enforce_digest_shape(
             continue
         if link in main_links or link in seen_appendix_links:
             continue
-        filtered_appendix.append(item)
+        appendix_pool.append(item)
         seen_appendix_links.add(link)
-        if len(filtered_appendix) >= appendix_max:
-            break
+    filtered_appendix = _filter_appendix_quality(appendix_pool, appendix_max)
 
     digest.appendix = filtered_appendix
     moved_links = {_normalize_url(item.link) for item in filtered_appendix if _normalize_url(item.link) in overflow_links}
@@ -663,6 +756,7 @@ def save_digest(digest: DailyDigest, output_dir: str = "data/digested") -> Path:
     meta_path.write_text(
         json.dumps(
             {
+                "run_id": os.getenv("DIGEST_RUN_ID", ""),
                 "lookback_hours": cfg.digest_lookback_hours,
                 "report_window": shape["window_label"],
                 "report_type": shape["report_type"],

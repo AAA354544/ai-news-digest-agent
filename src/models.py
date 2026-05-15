@@ -38,6 +38,7 @@ class DigestNewsItem(BaseModel):
     links: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     summary: str = ''
+    mechanism: str = ''
     why_it_matters: str = ''
     insights: str = ''
     source_names: list[str] = Field(default_factory=list)

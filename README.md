@@ -16,16 +16,21 @@ A lightweight AI news digest pipeline that turns multi-source candidates into da
 - GitHub Actions scheduled/manual automation
 - Markdown + HTML report generation
 - LLM JSON repair/normalization safeguards
+- Program-side digest shape enforcement for 24h/48h/72h windows
+- Deterministic quality report (`outputs/quality/*quality_report.json`)
+- Source health snapshots for fetch/clean observability
+- Main item summaries include event summary, mechanism, importance, and trend insight
 
 ## Architecture
 ```mermaid
 flowchart TD
     A[config/sources.yaml] --> B[Fetchers]
-    B --> C[Raw Candidates]
+    B --> C[Raw Candidates + Source Health]
     C --> D[Cleaner / Deduplicator]
     D --> E[Cleaned Candidates]
     E --> F[LLM Analyzer]
     F --> G[DailyDigest JSON]
+    G --> Q[Quality Validator]
     G --> H[Report Generator]
     H --> I[Markdown]
     H --> J[HTML]
@@ -41,6 +46,7 @@ pip install -r requirements.txt
 copy .env.example .env
 python cli.py status
 python cli.py run-pipeline
+python cli.py quality
 python cli.py send-email
 streamlit run app.py
 ```
@@ -78,6 +84,11 @@ python cli.py run-pipeline --send-email --group default
 ## Manual Verification
 ```bash
 python cli.py preflight --mode local
+python -m py_compile app.py cli.py src/config.py src/pipeline.py src/processors/analyzer.py src/processors/prompts.py src/processors/cleaner.py src/processors/deduplicator.py src/processors/candidate_scorer.py src/processors/digest_validator.py src/generators/report_generator.py
+pytest -q
+python tests/manual_test_digest_shape.py
+python tests/manual_test_report_statistics.py
+python tests/manual_test_digest_quality.py
 python tests/manual_test_config_models.py
 python tests/manual_test_fetchers.py
 python tests/manual_test_cleaner.py
@@ -93,7 +104,22 @@ python tests/manual_test_config_runtime.py
 ```bash
 streamlit run app.py
 ```
-- Use tabs for latest digest, pipeline run, history, source health, and recipient management.
+- Use pages for overview, digest runs, latest report, history, source health, and recipient management.
+- Latest Report includes Structured View, Full Markdown, and HTML Preview.
+- Structured View is grouped by category and shows summary, mechanism, why-it-matters, insights, source names, and labeled links.
+
+## Quality And Observability
+- `src/processors/analyzer.py` enforces main/appendix caps after LLM output and before save.
+- `src/processors/digest_validator.py` checks length, language, duplicate links, HN concentration, source concentration, Chinese coverage explanation, and weak AI relevance.
+- `data/raw/*_source_health.json` records source status, raw count, cleaned count, duration, endpoint, and error.
+- `data/index.json` is a local-only lightweight run history index. It is ignored by git.
+- Quality checks are warnings by default; use `python cli.py quality --strict` when you want failures to exit non-zero.
+
+## Sample Reports
+- Markdown reports are written to `outputs/markdown/`.
+- HTML reports are written to `outputs/html/`.
+- Quality reports are written to `outputs/quality/`.
+- Runtime outputs are ignored by git except `.gitkeep` placeholders.
 
 ## Screenshots
 Recommended paths:
@@ -105,12 +131,14 @@ Recommended paths:
 - Provider support is currently centered on Zhipu-compatible API.
 - Free-tier models may hit timeout/rate limits.
 - Some upstream feeds can become unstable.
+- Chinese source coverage depends on public feeds staying available and passing relevance filters.
+- The quality validator is deterministic and conservative; warnings require human judgment.
 - Schedule automation is suitable for daily digest, not high-precision cron jobs.
 
 ## Roadmap
-- More robust source health summaries
-- Better fallback prompts and confidence marking
-- Lightweight regression script set
+- Better source-specific health diagnostics and retry hints
+- More offline pytest coverage for renderers and recipient parsing
+- Better screenshot examples under `docs/assets/`
 - Future provider extensions (DeepSeek/Qwen)
 
 ## Security / Repo Hygiene

@@ -12,3 +12,4 @@ openai
 typer
 rich
 json-repair
+pytest

@@ -19,6 +19,10 @@ outputs/markdown/*
 outputs/html/*
 !outputs/html/.gitkeep
 
+outputs/quality/*
+!outputs/quality/.gitkeep
+
 data/recipients.local.json
+data/index.json
 data/cache/
 data/clustered/

@@ -39,6 +39,9 @@
 {% if item.summary %}
 - 摘要：{{ item.summary }}
 {% endif %}
+{% if item.mechanism %}
+- 机制说明：{{ item.mechanism }}
+{% endif %}
 {% if item.why_it_matters %}
 - 为什么重要：{{ item.why_it_matters }}
 {% endif %}
@@ -74,6 +77,9 @@
 {% endif %}
 {% if item.summary %}
 - 摘要：{{ item.summary }}
+{% endif %}
+{% if item.mechanism %}
+- 机制说明：{{ item.mechanism }}
 {% endif %}
 {% if item.why_it_matters %}
 - 为什么重要：{{ item.why_it_matters }}
@@ -182,6 +188,14 @@
   - {{ key }}: {{ value }}
 {% endfor %}
 {% endif %}
+
+{% endif %}
+{% if source_health %}
+## Source Health
+
+{% for row in source_health %}
+- {{ row.source_name }}: {{ row.status }} raw={{ row.raw_count }} cleaned={{ row.cleaned_count }}{% if row.error %} error={{ row.error }}{% endif %}
+{% endfor %}
 
 {% endif %}
 ---

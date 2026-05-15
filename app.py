@@ -21,7 +21,7 @@ from src.notifiers.recipients import (
     save_recipients,
     validate_email,
 )
-from src.pipeline import run_analyze_step, run_clean_step, run_email_step, run_fetch_step, run_report_step
+from src.pipeline import run_analyze_step, run_clean_step, run_email_step, run_fetch_step, run_quality_step, run_report_step
 from src.processors.prompts import recommend_llm_candidate_limit
 from src.utils.source_health import load_latest_source_health
 
@@ -30,6 +30,7 @@ MARKDOWN_DIR = PROJECT_ROOT / "outputs" / "markdown"
 HTML_DIR = PROJECT_ROOT / "outputs" / "html"
 DIGEST_DIR = PROJECT_ROOT / "data" / "digested"
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
+QUALITY_DIR = PROJECT_ROOT / "outputs" / "quality"
 
 
 def _find_latest(path: Path, pattern: str) -> Path | None:
@@ -158,6 +159,7 @@ def _structured_digest_groups(digest: Any | None) -> list[dict[str, Any]]:
                     "title_secondary": title_parts["secondary"],
                     "tags": getattr(item, "tags", []) or [],
                     "summary": getattr(item, "summary", "") or "",
+                    "mechanism": getattr(item, "mechanism", "") or "",
                     "why_it_matters": getattr(item, "why_it_matters", "") or "",
                     "insights": getattr(item, "insights", "") or "",
                     "source_names": source_names,
@@ -215,9 +217,24 @@ def _source_health_rows() -> list[dict[str, Any]]:
 
 def _health_summary(health: list[dict[str, Any]]) -> dict[str, int]:
     ok = sum(1 for row in health if str(row.get("status", "")).lower() in {"ok", "success"})
-    failed = sum(1 for row in health if str(row.get("status", "")).lower() not in {"ok", "success"})
-    candidates = sum(int(row.get("count") or row.get("candidate_count") or 0) for row in health)
-    return {"ok": ok, "failed": failed, "candidates": candidates}
+    failed = sum(1 for row in health if str(row.get("status", "")).lower() == "failed")
+    empty = sum(1 for row in health if str(row.get("status", "")).lower() == "empty")
+    disabled = sum(1 for row in health if str(row.get("status", "")).lower() == "disabled")
+    candidates = sum(int(row.get("raw_count") or row.get("count") or row.get("candidate_count") or 0) for row in health)
+    return {"ok": ok, "failed": failed, "empty": empty, "disabled": disabled, "candidates": candidates}
+
+
+def _latest_quality_report() -> dict[str, Any] | None:
+    path = _find_latest(QUALITY_DIR, "*quality_report.json")
+    if path is None:
+        return None
+    try:
+        import json
+
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
 
 
 def _load_all_sources() -> list[dict[str, Any]]:
@@ -231,7 +248,7 @@ def _load_all_sources() -> list[dict[str, Any]]:
 
 def _source_table_rows(enabled_only: bool = True) -> list[dict[str, Any]]:
     sources = _load_all_sources()
-    health_by_name = {str(row.get("name", "")).strip().lower(): row for row in _source_health_rows()}
+    health_by_name = {str(row.get("source_name") or row.get("name") or "").strip().lower(): row for row in _source_health_rows()}
     rows: list[dict[str, Any]] = []
     for source in sources:
         if enabled_only and not bool(source.get("enabled", True)):
@@ -239,7 +256,7 @@ def _source_table_rows(enabled_only: bool = True) -> list[dict[str, Any]]:
         name = str(source.get("name", ""))
         health = health_by_name.get(name.strip().lower(), {})
         status = health.get("status", "not checked")
-        note = str(health.get("note") or health.get("last_error") or "")
+        note = str(health.get("error") or health.get("note") or health.get("last_error") or "")
         rows.append(
             {
                 "source name": name,
@@ -248,7 +265,8 @@ def _source_table_rows(enabled_only: bool = True) -> list[dict[str, Any]]:
                 "region": source.get("region", ""),
                 "enabled": bool(source.get("enabled", True)),
                 "status": status,
-                "candidate count": health.get("count", health.get("candidate_count", "")),
+                "raw count": health.get("raw_count", health.get("count", health.get("candidate_count", ""))),
+                "cleaned count": health.get("cleaned_count", ""),
                 "last error": "" if str(status).lower() in {"ok", "success"} else note,
             }
         )
@@ -727,6 +745,8 @@ def _run_digest_with_status(*, send_email: bool, llm_limit: int, lookback_hours:
         md_path, html_path = run_report_step()
         outputs["markdown_path"] = md_path
         outputs["html_path"] = html_path
+        status_box.info("Running deterministic quality checks...")
+        outputs["quality_path"] = run_quality_step(strict=False)
         if send_email:
             status_box.info("Sending email newsletter...")
             outputs["email_result"] = run_email_step()
@@ -744,6 +764,8 @@ def render_overview(cfg: Any) -> None:
     enabled_source_count = len(get_enabled_sources())
     health = _source_health_rows()
     health_totals = _health_summary(health)
+    quality = _latest_quality_report()
+    stats = getattr(digest, "source_statistics", None) if digest is not None else None
 
     selected = _selected_item_count(digest)
     appendix = _appendix_count(digest)
@@ -775,7 +797,7 @@ def render_overview(cfg: Any) -> None:
         st.button("View Latest Report", use_container_width=True, on_click=_set_nav, args=("Latest Report",))
 
     st.markdown('<div class="section-label">Workspace Summary</div>', unsafe_allow_html=True)
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
         _metric_card("Latest Report", _date_from_path(md_path), "Most recent report")
     with c2:
@@ -783,9 +805,13 @@ def render_overview(cfg: Any) -> None:
     with c3:
         _metric_card("Appendix", appendix if appendix is not None else "-", "Supplementary")
     with c4:
-        _metric_card("Sources", enabled_source_count, "Enabled")
+        chinese_count = getattr(stats, "chinese_count", None) if stats is not None else None
+        _metric_card("Chinese", chinese_count if chinese_count is not None else "-", "Final candidates")
     with c5:
-        _metric_card("Email", "Ready" if _email_ready(cfg) else "Setup needed", "SMTP status")
+        _metric_card("Source Health", f"{health_totals['ok']}/{enabled_source_count}", "Healthy / enabled")
+    with c6:
+        quality_status = str(quality.get("status", "missing")).upper() if quality else "MISSING"
+        _metric_card("Quality", quality_status, "Deterministic checks")
 
     st.markdown('<div class="section-label">Today\'s Top Signals</div>', unsafe_allow_html=True)
     signals = _flatten_digest_items(digest)[:3]
@@ -966,6 +992,8 @@ def render_latest_report() -> None:
                         st.markdown("**Tags:** " + ", ".join(str(tag) for tag in item["tags"]))
                     if item["summary"]:
                         st.markdown(f"**Summary:** {item['summary']}")
+                    if item["mechanism"]:
+                        st.markdown(f"**Mechanism:** {item['mechanism']}")
                     if item["why_it_matters"]:
                         st.markdown(f"**Why it matters:** {item['why_it_matters']}")
                     if item["insights"]:
@@ -1020,6 +1048,16 @@ def render_latest_report() -> None:
 
 def render_history() -> None:
     st.header("History")
+    try:
+        from src.utils.run_index import load_run_index
+
+        run_rows = load_run_index(str(PROJECT_ROOT / "data" / "index.json"))
+    except Exception:
+        run_rows = []
+    if run_rows:
+        st.subheader("Pipeline Runs")
+        st.dataframe(run_rows, use_container_width=True, hide_index=True)
+
     markdown_files = list(MARKDOWN_DIR.glob("*-ai-news-digest.md"))
     html_files = list(HTML_DIR.glob("*-ai-news-digest.html"))
     files = sorted(markdown_files + html_files, key=lambda p: p.stat().st_mtime, reverse=True)
@@ -1060,7 +1098,7 @@ def render_sources() -> None:
     health = _source_health_rows()
     health_totals = _health_summary(health)
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
         _metric_card("Enabled sources", len(enabled_sources), "Configured in sources.yaml")
     with c2:
@@ -1068,6 +1106,8 @@ def render_sources() -> None:
     with c3:
         _metric_card("Failed", health_totals["failed"] if health else "-", "Latest health status")
     with c4:
+        _metric_card("Empty", health_totals["empty"] if health else "-", "No candidates")
+    with c5:
         _metric_card("Candidates", health_totals["candidates"] if health else "-", "Latest fetch count")
 
     st.subheader("Enabled Source Inventory")

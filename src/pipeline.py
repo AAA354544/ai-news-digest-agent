@@ -1,13 +1,18 @@
 ﻿from __future__ import annotations
 
 import json
-from datetime import date
+import os
+import time
+from collections import Counter
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from src.config import get_enabled_sources, load_app_config, load_sources_config
 from src.models import CandidateNews
 from src.processors.prompts import recommend_llm_candidate_limit
+from src.utils.run_index import append_run_index
+from src.utils.source_health import load_latest_source_health, save_source_health, update_latest_source_health_cleaned_counts
 
 
 def _find_latest_file(input_dir: str, pattern: str) -> Path:
@@ -67,6 +72,10 @@ def _run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
         from src.fetchers.rss_fetcher import RSSFetcher
 
         return RSSFetcher(source).fetch()
+    if source_type == "web_listing":
+        from src.fetchers.web_listing_fetcher import WebListingFetcher
+
+        return WebListingFetcher(source).fetch()
     return []
 
 
@@ -101,6 +110,36 @@ def _source_for_fetch_window(source: dict[str, Any], lookback_hours: int) -> dic
     return adjusted
 
 
+def _current_run_id() -> str:
+    existing = os.getenv("DIGEST_RUN_ID", "").strip()
+    if existing:
+        return existing
+    cfg = load_app_config()
+    topic = re_slug(str(cfg.digest_topic or "ai"))
+    return f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_{topic}_{cfg.digest_lookback_hours}h"
+
+
+def re_slug(value: str) -> str:
+    cleaned = "".join(ch.lower() if ch.isalnum() else "_" for ch in value.strip())
+    cleaned = "_".join(part for part in cleaned.split("_") if part)
+    return cleaned[:32] or "ai"
+
+
+def _source_health_record(source: dict[str, Any], status: str, raw_count: int = 0, error: str = "", duration: float = 0.0) -> dict[str, Any]:
+    return {
+        "source_name": source.get("name", "UNKNOWN"),
+        "source_type": source.get("type", ""),
+        "region": source.get("region", ""),
+        "language": source.get("language", ""),
+        "status": status,
+        "raw_count": raw_count,
+        "cleaned_count": 0,
+        "error": error,
+        "duration_seconds": round(duration, 3),
+        "endpoint": source.get("url_or_endpoint", ""),
+    }
+
+
 def _region_count(candidates: list[CandidateNews], region_name: str) -> int:
     aliases = {"chinese": {"chinese", "china", "zh", "cn"}, "international": {"international", "global", "en"}}
     wanted = aliases.get(region_name, {region_name})
@@ -121,6 +160,20 @@ def _chinese_shortage_reason(raw_candidates: list[CandidateNews], final_candidat
     enabled_chinese_sources = [source for source in chinese_sources if bool(source.get("enabled", True))]
     if not enabled_chinese_sources:
         return "no_chinese_sources_enabled"
+    health = load_latest_source_health()
+    chinese_health = [
+        row
+        for row in health
+        if str(row.get("region", "")).strip().lower() in {"chinese", "china", "zh", "cn"}
+        and str(row.get("status", "")).strip().lower() != "disabled"
+    ]
+    if chinese_health:
+        if all(str(row.get("status", "")).strip().lower() == "failed" for row in chinese_health):
+            return "enabled_chinese_sources_failed_fetch"
+        if sum(int(row.get("raw_count") or 0) for row in chinese_health) == 0:
+            return "enabled_chinese_sources_returned_zero_raw_candidates"
+        if sum(int(row.get("cleaned_count") or 0) for row in chinese_health) == 0:
+            return "chinese_candidates_removed_by_cleaning_or_dedup"
     if _region_count(raw_candidates, "chinese") == 0:
         return "enabled_chinese_sources_returned_zero_raw_candidates"
     return "chinese_candidates_dropped_before_final_llm_pool"
@@ -128,22 +181,46 @@ def _chinese_shortage_reason(raw_candidates: list[CandidateNews], final_candidat
 
 def run_fetch_step() -> Path:
     cfg = load_app_config()
+    sources_data = load_sources_config()
+    source_rows = sources_data.get("sources", []) if isinstance(sources_data, dict) else sources_data
     enabled_sources = get_enabled_sources()
+    enabled_names = {str(source.get("name", "")).strip() for source in enabled_sources}
     all_candidates: list[CandidateNews] = []
-    for source in enabled_sources:
+    health_records: list[dict[str, Any]] = []
+    for source in source_rows:
+        if not isinstance(source, dict):
+            continue
         source_name = source.get("name", "UNKNOWN")
+        if source_name not in enabled_names:
+            health_records.append(_source_health_record(source, "disabled"))
+            continue
+        started = time.perf_counter()
         try:
             fetch_source = _source_for_fetch_window(source, cfg.digest_lookback_hours)
             items = _run_fetcher(fetch_source)
             print(f"[fetch] {source_name}: {len(items)} (max_items={fetch_source.get('max_items')})")
             all_candidates.extend(items)
+            status = "success" if items else "empty"
+            health_records.append(
+                _source_health_record(fetch_source, status, raw_count=len(items), duration=time.perf_counter() - started)
+            )
         except Exception as exc:
             print(f"[fetch] failed {source_name}: {exc}")
+            health_records.append(
+                _source_health_record(source, "failed", error=str(exc), duration=time.perf_counter() - started)
+            )
 
     out_dir = Path("data/raw")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{date.today().isoformat()}_raw_candidates.json"
     out_path.write_text(json.dumps(_to_json_compatible(all_candidates), ensure_ascii=False, indent=2), encoding="utf-8")
+    health_path = save_source_health(health_records, output_dir="data/raw")
+    print(f"[fetch] source health: {health_path}")
+    failed_or_empty = [row for row in health_records if row.get("status") in {"failed", "empty"}]
+    if not all_candidates:
+        print("[fetch] warning: all enabled sources returned zero candidates.")
+    elif failed_or_empty and len(failed_or_empty) >= max(1, len(enabled_sources) // 2):
+        print(f"[fetch] warning: {len(failed_or_empty)} enabled sources failed or returned empty.")
     return out_path
 
 
@@ -157,6 +234,10 @@ def run_clean_step() -> Path:
 
     cleaned_only = clean_candidates(raw_candidates, lookback_hours=cfg.digest_lookback_hours)
     deduped_only = deduplicate_by_url(cleaned_only)
+    cleaned_counts = Counter(item.source_name for item in cleaned_only if item.source_name)
+    health_path = update_latest_source_health_cleaned_counts(dict(cleaned_counts), input_dir="data/raw")
+    if health_path:
+        print(f"[clean] source health updated: {health_path}")
     final_candidates = prepare_llm_candidates(
         raw_candidates,
         lookback_hours=cfg.digest_lookback_hours,
@@ -268,6 +349,30 @@ def run_report_step() -> tuple[Path, Path]:
     return save_report_files(digest, markdown_text, html_text, output_base_dir="outputs")
 
 
+def run_quality_step(strict: bool = False) -> Path:
+    from src.generators.report_generator import load_latest_digest
+    from src.processors.digest_validator import save_quality_report, validate_digest
+
+    cfg = load_app_config()
+    digest = load_latest_digest(input_dir="data/digested")
+    try:
+        cleaned_path = _find_latest_file("data/cleaned", "*_cleaned_candidates.json")
+        candidates = _load_candidates(cleaned_path)
+    except Exception:
+        candidates = []
+    report = validate_digest(digest, lookback_hours=cfg.digest_lookback_hours, candidates=candidates, strict=strict)
+    report["run_id"] = _current_run_id()
+    out_path = save_quality_report(report, output_dir="outputs/quality", run_id=report["run_id"])
+    print(
+        "[quality] "
+        f"status={report.get('status')} "
+        f"errors={len(report.get('errors', []))} "
+        f"warnings={len(report.get('warnings', []))} "
+        f"path={out_path}"
+    )
+    return out_path
+
+
 def run_email_step(recipients: list[str] | None = None) -> dict[str, object]:
     from src.notifiers.email_sender import EmailSender
 
@@ -281,20 +386,37 @@ def run_full_pipeline(
     llm_candidate_limit: int | None = None,
     recipients: list[str] | None = None,
 ) -> dict[str, Path | dict[str, object] | None]:
+    run_id = _current_run_id()
+    os.environ.setdefault("DIGEST_RUN_ID", run_id)
     raw_path = run_fetch_step()
     cleaned_path = run_clean_step()
     digest_path = run_analyze_step(limit_for_test=llm_candidate_limit)
     md_path, html_path = run_report_step()
+    quality_path = run_quality_step(strict=False)
 
     email_result: dict[str, object] | None = None
     if send_email:
         email_result = run_email_step(recipients=recipients)
 
-    return {
+    outputs: dict[str, Path | dict[str, object] | None] = {
         "raw_path": raw_path,
         "cleaned_path": cleaned_path,
         "digest_path": digest_path,
         "markdown_path": md_path,
         "html_path": html_path,
+        "quality_path": quality_path,
         "email_result": email_result,
     }
+    append_run_index(
+        {
+            "run_id": run_id,
+            "lookback_hours": load_app_config().digest_lookback_hours,
+            "raw_path": str(raw_path),
+            "cleaned_path": str(cleaned_path),
+            "digest_path": str(digest_path),
+            "markdown_path": str(md_path),
+            "html_path": str(html_path),
+            "quality_path": str(quality_path),
+        }
+    )
+    return outputs

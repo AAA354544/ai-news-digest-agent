@@ -180,54 +180,54 @@
     notes: "Public topic feed."
 
   - name: 量子位
-    type: rss_or_web
+    type: web_listing
     region: chinese
     language: zh
     category: ai_media
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify public feed or compliant endpoint."
+    url_or_endpoint: "https://www.qbitai.com/"
+    max_items: 16
+    enabled: true
+    notes: "Public listing page; lightweight parser only follows same-domain links."
 
   - name: 机器之心
-    type: rss_or_web
+    type: rss
     region: chinese
     language: zh
     category: ai_media
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify public feed or compliant endpoint."
+    url_or_endpoint: "https://www.jiqizhixin.com/rss"
+    max_items: 16
+    enabled: true
+    notes: "Public RSS feed; failures are tracked in source health."
 
-  - name: 智谱 AI 官方
-    type: rss_or_web
+  - name: InfoQ 中文
+    type: rss
     region: chinese
     language: zh
-    category: official_blog
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify official public endpoint."
+    category: ai_media
+    url_or_endpoint: "https://www.infoq.cn/rss/"
+    max_items: 12
+    enabled: true
+    notes: "Public Chinese tech RSS; AI relevance is filtered downstream."
 
-  - name: DeepSeek 官方
-    type: rss_or_web
+  - name: 雷峰网
+    type: rss
     region: chinese
     language: zh
-    category: ai_company
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify official public endpoint."
+    category: ai_media
+    url_or_endpoint: "https://www.leiphone.com/feed/categoryRss/name/ai"
+    max_items: 12
+    enabled: true
+    notes: "Public feed; AI relevance is filtered downstream."
 
-  - name: 通义千问官方
-    type: rss_or_web
+  - name: OSChina AI/Open Source
+    type: rss
     region: chinese
     language: zh
-    category: ai_company
-    url_or_endpoint: "TODO"
-    max_items: 20
-    enabled: false
-    notes: "TODO: verify official public endpoint."
+    category: open_source_project
+    url_or_endpoint: "https://www.oschina.net/news/rss"
+    max_items: 10
+    enabled: true
+    notes: "Public open-source news RSS; AI relevance is filtered downstream."
 
   - name: 百度智能云 AI 官方
     type: rss_or_web

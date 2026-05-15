@@ -9,6 +9,7 @@ from src.config import load_app_config
 from src.models import DailyDigest
 from src.processors.analyzer import enforce_digest_shape, finalize_digest_statistics, normalize_digest_payload
 from src.processors.prompts import recommend_digest_shape
+from src.utils.source_health import load_latest_source_health
 
 
 def _selected_item_count(digest: DailyDigest) -> int:
@@ -111,6 +112,7 @@ def _report_context(digest: DailyDigest) -> dict[str, object]:
         "report_type": shape["report_type"],
         "recommended_main_range": f"{shape['main_min']}-{shape['main_max']}",
         "recommended_appendix_range": f"{shape['appendix_min']}-{shape['appendix_max']}",
+        "source_health": load_latest_source_health(),
     }
     meta_path = Path("data/digested") / f"{digest.date}_digest_meta.json"
     if meta_path.exists():

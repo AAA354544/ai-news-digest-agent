@@ -90,6 +90,9 @@
                       {% if item.summary %}
                       <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#374151;">{{ item.summary }}</p>
                       {% endif %}
+                      {% if item.mechanism %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>机制说明：</strong>{{ item.mechanism }}</p>
+                      {% endif %}
                       {% if item.why_it_matters %}
                       <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>为什么重要：</strong>{{ item.why_it_matters }}</p>
                       {% endif %}
@@ -131,6 +134,9 @@
                       {% endif %}
                       {% if item.summary %}
                       <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#374151;">{{ item.summary }}</p>
+                      {% endif %}
+                      {% if item.mechanism %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>机制说明：</strong>{{ item.mechanism }}</p>
                       {% endif %}
                       {% if item.why_it_matters %}
                       <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>为什么重要：</strong>{{ item.why_it_matters }}</p>
@@ -205,6 +211,23 @@
                     {% if digest.source_statistics.source_distribution %}<strong>source_distribution:</strong><br>{% for key, value in digest.source_statistics.source_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
                     {% if digest.source_statistics.category_distribution %}<strong>category_distribution:</strong><br>{% for key, value in digest.source_statistics.category_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
                     {% if digest.source_statistics.final_candidate_source_distribution %}<strong>final_candidate_source_distribution:</strong><br>{% for key, value in digest.source_statistics.final_candidate_source_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          {% if source_health %}
+          <tr>
+            <td class="content" style="padding:8px 28px 22px 28px;">
+              <h2 style="margin:18px 0 12px 0; padding-top:16px; border-top:1px solid #E5E7EB; font-size:18px; line-height:26px; color:#111827;">Source Health</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E5E7EB; border-radius:12px; background:#F9FAFB;">
+                <tr>
+                  <td style="padding:12px; font-size:13px; line-height:22px; color:#4B5563;">
+                    {% for row in source_health %}
+                      <strong>{{ row.source_name }}:</strong> {{ row.status }} raw={{ row.raw_count }} cleaned={{ row.cleaned_count }}{% if row.error %} error={{ row.error }}{% endif %}<br>
+                    {% endfor %}
                   </td>
                 </tr>
               </table>

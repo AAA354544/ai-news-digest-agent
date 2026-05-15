@@ -6,6 +6,14 @@ candidate_quotas:
   ai_media: 8
   rss: 8
   rss_or_web: 6
+  web_listing: 6
+
+appendix_policy:
+  max_hn_ratio: 0.25
+  max_single_source_ratio: 0.35
+  require_link: true
+  require_brief_summary: true
+  filter_weak_ai_relevance: true
 
 main_digest_policy:
   max_research_ratio: 0.45

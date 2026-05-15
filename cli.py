@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import json
 from typing import Optional
 
 import typer
@@ -14,6 +15,7 @@ from src.pipeline import (
     run_email_step,
     run_fetch_step,
     run_full_pipeline,
+    run_quality_step,
     run_report_step,
 )
 
@@ -118,6 +120,19 @@ def report_cmd() -> None:
 @app.command("run-report")
 def run_report_cmd() -> None:
     report_cmd()
+
+
+@app.command("quality")
+def quality_cmd(
+    strict: bool = typer.Option(False, "--strict", help="Exit non-zero when deterministic quality checks fail."),
+) -> None:
+    console.print("[cyan]Running digest quality validation...[/cyan]")
+    path = run_quality_step(strict=strict)
+    console.print(f"[green]Quality report completed.[/green] quality_path={path}")
+    if strict:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if report.get("status") in {"error", "fail"}:
+            raise typer.Exit(code=1)
 
 
 @app.command("send-email")

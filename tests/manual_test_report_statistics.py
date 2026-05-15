@@ -20,6 +20,7 @@ def _item(idx: int, source: str, link: str, tags: list[str] | None = None) -> Di
         links=[link],
         tags=tags or ["AI"],
         summary=f"Summary {idx}",
+        mechanism=f"Mechanism {idx}",
         why_it_matters=f"Why {idx}",
         insights=f"Insight {idx}",
         source_names=[source],

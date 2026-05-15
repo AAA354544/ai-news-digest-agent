@@ -35,6 +35,10 @@ def run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
         return GitHubTrendingFetcher(source).fetch()
     if source_type == 'rss_or_web':
         return RSSFetcher(source).fetch()
+    if source_type == 'web_listing':
+        from src.fetchers.web_listing_fetcher import WebListingFetcher
+
+        return WebListingFetcher(source).fetch()
 
     return []
 

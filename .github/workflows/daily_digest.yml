@@ -135,6 +135,7 @@ jobs:
           path: |
             outputs/markdown
             outputs/html
+            outputs/quality
             data/digested
             data/raw/*source_health*.json
           if-no-files-found: ignore

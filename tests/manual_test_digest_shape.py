@@ -19,6 +19,7 @@ def _fake_item(idx: int) -> DigestNewsItem:
         links=[f"https://example.com/news/{idx}"],
         tags=["ai"],
         summary=f"Summary for signal {idx}.",
+        mechanism=f"Mechanism for signal {idx}.",
         why_it_matters="It matters for the AI ecosystem.",
         insights="This points to a useful trend.",
         source_names=["Example"],
