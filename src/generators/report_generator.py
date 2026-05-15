@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.config import load_app_config
 from src.models import DailyDigest
-from src.processors.analyzer import normalize_digest_payload
+from src.processors.analyzer import enforce_digest_shape, finalize_digest_statistics, normalize_digest_payload
 from src.processors.prompts import recommend_digest_shape
 
 
@@ -23,8 +23,10 @@ def load_latest_digest(input_dir: str = "data/digested") -> DailyDigest:
 
     payload = normalize_digest_payload(json.loads(files[0].read_text(encoding="utf-8")))
     if hasattr(DailyDigest, "model_validate"):
-        return DailyDigest.model_validate(payload)
-    return DailyDigest(**payload)
+        digest = DailyDigest.model_validate(payload)
+    else:
+        digest = DailyDigest(**payload)
+    return finalize_digest_statistics(enforce_digest_shape(digest))
 
 
 def _build_env(template_dir: str = "templates") -> Environment:
@@ -63,6 +65,39 @@ def link_label(link: str, source_names: list[str] | None = None) -> str:
     if "news.ycombinator.com" in value or "hacker news" in sources:
         return "社区讨论"
     if any(domain in value for domain in ("techcrunch.com", "technologyreview.com", "venturebeat.com")):
+        return "媒体报道"
+    return "阅读原文"
+
+
+def split_title(title: str) -> dict[str, str]:
+    raw = (title or "").strip()
+    for separator in ("｜", "|", "锝?"):
+        if separator in raw:
+            primary, secondary = raw.split(separator, 1)
+            return {"primary": primary.strip(), "secondary": secondary.strip()}
+    return {"primary": raw, "secondary": ""}
+
+
+def link_label(link: str, source_names: list[str] | None = None) -> str:
+    value = (link or "").lower()
+    sources = " ".join(source_names or []).lower()
+    if "arxiv.org" in value or "arxiv" in sources:
+        return "arXiv"
+    if "github.com" in value or "github" in sources:
+        return "GitHub 仓库"
+    if "openai.com" in value or "openai" in sources:
+        return "OpenAI 原文"
+    if "anthropic.com" in value or "anthropic" in sources:
+        return "Anthropic 原文"
+    if "microsoft.com" in value or "microsoft" in sources:
+        return "Microsoft 原文"
+    if "nvidia.com" in value or "nvidia" in sources:
+        return "NVIDIA 原文"
+    if "huggingface.co" in value or "hugging face" in sources:
+        return "Hugging Face 原文"
+    if "news.ycombinator.com" in value or "hacker news" in sources:
+        return "社区讨论"
+    if any(domain in value for domain in ("techcrunch.com", "technologyreview.com", "venturebeat.com", "wired.com")):
         return "媒体报道"
     return "阅读原文"
 

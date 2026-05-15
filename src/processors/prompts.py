@@ -166,8 +166,8 @@ def build_digest_user_prompt(
 
     categories = _preferred_categories()
     shape = recommend_digest_shape(lookback_hours)
-    main_min = max(int(shape['main_min']), int(min_items or 0))
-    main_max = max(int(shape['main_max']), int(max_items or 0), main_min)
+    main_min = int(shape['main_min'])
+    main_max = int(shape['main_max'])
     appendix_min = int(shape['appendix_min'])
     appendix_max = int(shape['appendix_max'])
     skeleton = {

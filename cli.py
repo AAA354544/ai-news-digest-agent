@@ -115,6 +115,11 @@ def report_cmd() -> None:
     console.print(f"[green]Report completed.[/green] markdown_path={md_path} html_path={html_path}")
 
 
+@app.command("run-report")
+def run_report_cmd() -> None:
+    report_cmd()
+
+
 @app.command("send-email")
 def send_email_cmd(
     to: Optional[str] = typer.Option(None, "--to", help="Comma/semicolon/newline separated recipient emails."),

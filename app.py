@@ -11,7 +11,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from src.config import get_enabled_sources, is_placeholder_value, load_app_config, load_sources_config
-from src.generators.report_generator import load_latest_digest
+from src.generators.report_generator import link_label, load_latest_digest, split_title
 from src.notifiers.recipients import (
     add_or_update_recipient,
     get_enabled_recipients,
@@ -68,6 +68,15 @@ def _appendix_count(digest: Any | None) -> int | None:
     return len(getattr(digest, "appendix", []) or [])
 
 
+def _source_count(digest: Any | None) -> int | None:
+    if digest is None:
+        return None
+    stats = getattr(digest, "source_statistics", None)
+    if stats is None:
+        return None
+    return getattr(stats, "source_count", None)
+
+
 def _extract_counts_from_markdown(md_text: str | None) -> tuple[int | None, int | None]:
     if not md_text:
         return None, None
@@ -119,6 +128,44 @@ def _flatten_digest_items(digest: Any | None) -> list[dict[str, Any]]:
                 }
             )
     return rows
+
+
+def _structured_digest_groups(digest: Any | None) -> list[dict[str, Any]]:
+    if digest is None:
+        return []
+    groups: list[dict[str, Any]] = []
+    for group in getattr(digest, "main_digest", []) or []:
+        category = getattr(group, "category_name", "") or "Other"
+        items: list[dict[str, Any]] = []
+        for idx, item in enumerate(getattr(group, "items", []) or [], start=1):
+            title = getattr(item, "title", "") or "Untitled"
+            title_parts = split_title(title)
+            source_names = getattr(item, "source_names", []) or []
+            links = [
+                {
+                    "label": link_label(str(link), source_names) if str(link).strip() else f"Link {link_idx}",
+                    "url": str(link).strip(),
+                }
+                for link_idx, link in enumerate(getattr(item, "links", []) or [], start=1)
+                if str(link).strip()
+            ]
+            items.append(
+                {
+                    "index": idx,
+                    "category": category,
+                    "title": title,
+                    "title_primary": title_parts["primary"],
+                    "title_secondary": title_parts["secondary"],
+                    "tags": getattr(item, "tags", []) or [],
+                    "summary": getattr(item, "summary", "") or "",
+                    "why_it_matters": getattr(item, "why_it_matters", "") or "",
+                    "insights": getattr(item, "insights", "") or "",
+                    "source_names": source_names,
+                    "links": links,
+                }
+            )
+        groups.append({"category": category, "items": items})
+    return groups
 
 
 def _markdown_preview(md_text: str | None, max_chars: int = 4500) -> str | None:
@@ -492,6 +539,110 @@ def _inject_css() -> None:
 
 def _set_nav(page: str) -> None:
     st.session_state["nav"] = page
+    _mark_scroll_to_top_pending()
+
+
+def _mark_scroll_to_top_pending() -> None:
+    st.session_state["_scroll_to_top_pending"] = True
+    st.session_state["_scroll_to_top_nonce"] = int(st.session_state.get("_scroll_to_top_nonce", 0)) + 1
+
+
+def _page_top_anchor() -> None:
+    st.markdown('<div id="app-page-top" style="height:0; overflow:hidden;"></div>', unsafe_allow_html=True)
+
+
+def _scroll_to_top_once() -> None:
+    if st.session_state.pop("_scroll_to_top_pending", False):
+        nonce = int(st.session_state.get("_scroll_to_top_nonce", 0))
+        components.html(
+            """
+            <script>
+            (function () {
+              const scrollNonce = __SCROLL_NONCE__;
+              const topAnchor = "app-page-top";
+              function tryHashScroll() {
+                try {
+                  const parentWindow = window.parent;
+                  const base = parentWindow.location.pathname + parentWindow.location.search;
+                  parentWindow.location.hash = "";
+                  parentWindow.setTimeout(function () {
+                    parentWindow.location.hash = topAnchor;
+                    parentWindow.setTimeout(function () {
+                      if (parentWindow.history && parentWindow.history.replaceState) {
+                        parentWindow.history.replaceState(null, "", base);
+                      }
+                    }, 120);
+                  }, 20);
+                } catch (err) {}
+              }
+
+              function scrollTop() {
+                let parentWindow = window.parent;
+                let doc = null;
+                try {
+                  doc = parentWindow.document;
+                } catch (err) {
+                  tryHashScroll();
+                  try { parentWindow.scrollTo(0, 0); } catch (innerErr) {}
+                  return;
+                }
+
+                const directTargets = [
+                  parentWindow,
+                  doc.scrollingElement,
+                  doc.documentElement,
+                  doc.body,
+                  doc.getElementById(topAnchor),
+                  doc.querySelector('[data-testid="stAppViewContainer"]'),
+                  doc.querySelector('[data-testid="stMain"]'),
+                  doc.querySelector('[data-testid="stMainBlockContainer"]'),
+                  doc.querySelector('section.main'),
+                  doc.querySelector('.main'),
+                  doc.querySelector('.stApp')
+                ].filter(Boolean);
+
+                for (const target of directTargets) {
+                  try {
+                    if (target.scrollTo) {
+                      target.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                    }
+                    if ("scrollTop" in target) {
+                      target.scrollTop = 0;
+                    }
+                  } catch (err) {}
+                }
+
+                try {
+                  const anchor = doc.getElementById(topAnchor);
+                  if (anchor && anchor.scrollIntoView) {
+                    anchor.scrollIntoView({ block: "start", inline: "nearest", behavior: "auto" });
+                  }
+                } catch (err) {}
+
+                const scrollables = Array.from(doc.querySelectorAll("main, section, div"))
+                  .filter((el) => {
+                    const style = parentWindow.getComputedStyle(el);
+                    const overflowY = style.overflowY || "";
+                    return el.scrollHeight > el.clientHeight &&
+                      ["auto", "scroll", "overlay"].includes(overflowY);
+                  });
+                for (const el of scrollables) {
+                  try { el.scrollTop = 0; } catch (err) {}
+                }
+              }
+
+              tryHashScroll();
+              scrollTop();
+              try { window.parent.requestAnimationFrame(scrollTop); } catch (err) {}
+              [60, 180, 420, 900, 1400, 2200].forEach(function (delay) {
+                try { window.parent.setTimeout(scrollTop, delay); } catch (err) {}
+              });
+              window.__aiDigestLastScrollNonce = scrollNonce;
+            })();
+            </script>
+            """.replace("__SCROLL_NONCE__", str(nonce)),
+            height=0,
+        )
 
 
 def _metric_card(label: str, value: str | int, caption: str = "") -> None:
@@ -769,6 +920,8 @@ def render_latest_report() -> None:
     st.header("Latest Report")
     md_path, html_path = _latest_report_paths()
     md_text = _read_text(md_path)
+    html_text = _read_text(html_path)
+    digest = _load_latest_digest_safe()
 
     if not md_path and not html_path:
         _empty_state("No report found", "Generate a digest or run Lightweight Test to render the latest digested JSON.")
@@ -780,11 +933,89 @@ def render_latest_report() -> None:
     st.markdown(f'<div class="path-text">HTML: {escape(str(html_path or "-"))}</div>', unsafe_allow_html=True)
     _render_downloads(md_path, html_path, "latest_report")
 
-    st.subheader("Markdown Preview")
-    if md_text:
-        st.markdown(_markdown_preview(md_text) or "")
-    else:
-        _empty_state("Markdown preview unavailable", "The latest Markdown file could not be found or read.")
+    selected = _selected_item_count(digest)
+    appendix = _appendix_count(digest)
+    source_count = _source_count(digest)
+    if selected is None or appendix is None:
+        md_selected, md_appendix = _extract_counts_from_markdown(md_text)
+        selected = selected if selected is not None else md_selected
+        appendix = appendix if appendix is not None else md_appendix
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        _metric_card("Selected", selected if selected is not None else "-", "Main digest")
+    with c2:
+        _metric_card("Appendix", appendix if appendix is not None else "-", "Supplementary")
+    with c3:
+        _metric_card("Sources", source_count if source_count is not None else "-", "Unique sources")
+
+    tab_structured, tab_markdown, tab_html = st.tabs(["Structured View", "Full Markdown", "HTML Preview"])
+
+    with tab_structured:
+        groups = _structured_digest_groups(digest)
+        non_empty_groups = [group for group in groups if group["items"]]
+        if non_empty_groups:
+            for group in non_empty_groups:
+                st.subheader(group["category"])
+                for item in group["items"]:
+                    st.markdown(f"#### {item['index']}. {item['title_primary']}")
+                    if item["title_secondary"]:
+                        st.markdown(item["title_secondary"])
+                    st.caption(item["category"])
+                    if item["tags"]:
+                        st.markdown("**Tags:** " + ", ".join(str(tag) for tag in item["tags"]))
+                    if item["summary"]:
+                        st.markdown(f"**Summary:** {item['summary']}")
+                    if item["why_it_matters"]:
+                        st.markdown(f"**Why it matters:** {item['why_it_matters']}")
+                    if item["insights"]:
+                        st.markdown(f"**Insight:** {item['insights']}")
+                    if item["source_names"]:
+                        st.markdown("**Source:** " + ", ".join(str(source) for source in item["source_names"]))
+                    if item["links"]:
+                        st.markdown(
+                            "**Links:** "
+                            + " ".join(f"[{link['label']}]({link['url']})" for link in item["links"])
+                        )
+                    st.divider()
+        else:
+            _empty_state("Structured view unavailable", "The latest digest JSON could not be loaded.")
+
+        appendix_items = getattr(digest, "appendix", []) or [] if digest is not None else []
+        if appendix_items:
+            st.subheader("Appendix")
+            for idx, item in enumerate(appendix_items, start=1):
+                title_parts = split_title(getattr(item, "title", "") or "Untitled")
+                link = getattr(item, "link", "") or ""
+                source = getattr(item, "source", "") or ""
+                brief = getattr(item, "brief_summary", "") or ""
+                label = link_label(link, [source]) if link else ""
+                st.markdown(f"{idx}. **{title_parts['primary']}**")
+                if title_parts["secondary"]:
+                    st.markdown(title_parts["secondary"])
+                if source:
+                    st.markdown(f"   - Source: {source}")
+                if brief:
+                    st.markdown(f"   - Summary: {brief}")
+                if link:
+                    st.markdown(f"   - Link: [{label}]({link})")
+                continue
+                if link:
+                    st.markdown(f"- [{title}]({link}) · {source}  \n  {brief}")
+                else:
+                    st.markdown(f"- **{title}** · {source}  \n  {brief}")
+
+    with tab_markdown:
+        if md_text:
+            st.markdown(md_text)
+        else:
+            _empty_state("Markdown unavailable", "The latest Markdown file could not be found or read.")
+
+    with tab_html:
+        if html_text:
+            components.html(html_text, height=900, scrolling=True)
+        else:
+            _empty_state("HTML preview unavailable", "The latest HTML file could not be found or read.")
 
 
 def render_history() -> None:
@@ -982,6 +1213,7 @@ def main() -> None:
     cfg = load_app_config()
     st.set_page_config(page_title="AI News Digest Agent", page_icon="AI", layout="wide")
     _inject_css()
+    _page_top_anchor()
 
     pages = ["Overview", "Run Digest", "Latest Report", "History", "Sources", "Recipients"]
     if "nav" not in st.session_state:
@@ -995,6 +1227,9 @@ def main() -> None:
         index=pages.index(st.session_state.get("nav", "Overview")),
         key="nav",
     )
+    if st.session_state.get("_last_rendered_nav") != selected_page:
+        _mark_scroll_to_top_pending()
+        st.session_state["_last_rendered_nav"] = selected_page
 
     st.sidebar.markdown("---")
     st.sidebar.markdown('<span class="status-pill">Runtime</span>', unsafe_allow_html=True)
@@ -1017,6 +1252,8 @@ def main() -> None:
         render_sources()
     elif selected_page == "Recipients":
         render_recipients()
+
+    _scroll_to_top_once()
 
 
 if __name__ == "__main__":

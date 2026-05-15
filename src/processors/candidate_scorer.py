@@ -56,6 +56,20 @@ _LOW_SIGNAL_PATTERNS = (
     r"\b(account suspended|seconds after purchase|customer support)\b",
 )
 
+_STRONG_AI_PATTERNS = (
+    r"\b(ai|artificial intelligence|llm|large language model|rag|mcp)\b",
+    r"\b(openai|anthropic|claude|deepmind|gemini|qwen|deepseek)\b",
+    r"\b(agentic|autonomous agent|ai agent|llm agent|multi-agent|tool calling|reasoning)\b",
+    r"\b(transformer|diffusion|neural|machine learning|embedding|inference|fine-?tuning)\b",
+)
+
+_AMBIGUOUS_AGENT_PATTERNS = (
+    r"\b(monitoring|logging|metrics|observability|telemetry)\s+agent\b",
+    r"\b(data collection|collector|collection)\s+agent\b",
+    r"\b(user|browser|software|desktop|network|security|backup|build|deployment)\s+agent\b",
+    r"\b(agent for (monitoring|logging|metrics|data collection|telemetry))\b",
+)
+
 
 @dataclass(frozen=True)
 class CandidateScore:
@@ -136,6 +150,28 @@ def is_low_signal_title(title: str) -> bool:
     return any(re.search(pattern, lowered) for pattern in _LOW_SIGNAL_PATTERNS)
 
 
+def has_strong_ai_evidence(text: str) -> bool:
+    lowered = _safe_text(text).lower()
+    return any(re.search(pattern, lowered) for pattern in _STRONG_AI_PATTERNS)
+
+
+def has_ambiguous_non_ai_agent_context(text: str) -> bool:
+    lowered = _safe_text(text).lower()
+    return any(re.search(pattern, lowered) for pattern in _AMBIGUOUS_AGENT_PATTERNS)
+
+
+def is_probable_ai_github_project(title: str, description: str = "") -> bool:
+    text = f"{title} {description}"
+    if not has_strong_ai_evidence(text):
+        return False
+    if has_ambiguous_non_ai_agent_context(text) and not re.search(
+        r"\b(ai|llm|agentic|openai|claude|gemini|rag|mcp|reasoning|tool calling)\b",
+        text.lower(),
+    ):
+        return False
+    return True
+
+
 def score_candidate(item: CandidateNews) -> CandidateScore:
     title = _safe_text(item.title)
     summary = _safe_text(item.summary_or_snippet)
@@ -166,6 +202,13 @@ def score_candidate(item: CandidateNews) -> CandidateScore:
     elif source_type in {"rss", "rss_or_web"}:
         score -= 1.5
         reasons.append("no_topic_hit_for_general_source:-1.50")
+
+    if source_type == "github_trending" and not is_probable_ai_github_project(title, summary):
+        score -= 3.5
+        reasons.append("github_ambiguous_agent_or_weak_ai_evidence:-3.50")
+    elif source_type == "github_trending" and has_ambiguous_non_ai_agent_context(f"{title} {summary}"):
+        score -= 1.0
+        reasons.append("github_ambiguous_agent_context:-1.00")
 
     if item.published_at:
         score += 0.55

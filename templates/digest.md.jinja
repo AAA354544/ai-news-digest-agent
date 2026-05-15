@@ -128,17 +128,59 @@
 {% if digest.source_statistics.cleaned_candidates is defined %}
 - cleaned_candidates: {{ digest.source_statistics.cleaned_candidates }}
 {% endif %}
+{% if digest.source_statistics.final_llm_candidates is defined %}
+- final_llm_candidates: {{ digest.source_statistics.final_llm_candidates }}
+{% endif %}
 {% if digest.source_statistics.selected_items is defined %}
 - selected_items: {{ digest.source_statistics.selected_items }}
 {% endif %}
+{% if digest.source_statistics.appendix_items is defined %}
+- appendix_items: {{ digest.source_statistics.appendix_items }}
+{% endif %}
+{% if digest.source_statistics.dropped_items is defined %}
+- dropped_items: {{ digest.source_statistics.dropped_items }}
+{% endif %}
+{% if digest.source_statistics.moved_from_main_to_appendix is defined %}
+- moved_from_main_to_appendix: {{ digest.source_statistics.moved_from_main_to_appendix }}
+{% endif %}
 {% if digest.source_statistics.source_count is defined %}
 - source_count: {{ digest.source_statistics.source_count }}
+{% endif %}
+{% if digest.source_statistics.no_published_at_count is defined %}
+- no_published_at_count: {{ digest.source_statistics.no_published_at_count }}
+{% endif %}
+{% if digest.source_statistics.no_published_at_selected_count is defined %}
+- no_published_at_selected_count: {{ digest.source_statistics.no_published_at_selected_count }}
 {% endif %}
 {% if digest.source_statistics.international_count is defined and digest.source_statistics.international_count is not none %}
 - international_count: {{ digest.source_statistics.international_count }}
 {% endif %}
 {% if digest.source_statistics.chinese_count is defined and digest.source_statistics.chinese_count is not none %}
 - chinese_count: {{ digest.source_statistics.chinese_count }}
+{% endif %}
+{% if digest.source_statistics.chinese_shortage_reason %}
+- chinese_shortage_reason: {{ digest.source_statistics.chinese_shortage_reason }}
+{% endif %}
+{% if digest.source_statistics.research_shortage_reason %}
+- research_shortage_reason: {{ digest.source_statistics.research_shortage_reason }}
+{% endif %}
+{% if digest.source_statistics.source_distribution %}
+- source_distribution:
+{% for key, value in digest.source_statistics.source_distribution.items() %}
+  - {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% if digest.source_statistics.category_distribution %}
+- category_distribution:
+{% for key, value in digest.source_statistics.category_distribution.items() %}
+  - {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% if digest.source_statistics.final_candidate_source_distribution %}
+- final_candidate_source_distribution:
+{% for key, value in digest.source_statistics.final_candidate_source_distribution.items() %}
+  - {{ key }}: {{ value }}
+{% endfor %}
 {% endif %}
 
 {% endif %}

@@ -190,10 +190,21 @@
                   <td style="padding:12px; font-size:13px; line-height:22px; color:#4B5563;">
                     {% if digest.source_statistics.total_candidates is defined %}<strong>total_candidates:</strong> {{ digest.source_statistics.total_candidates }}<br>{% endif %}
                     {% if digest.source_statistics.cleaned_candidates is defined %}<strong>cleaned_candidates:</strong> {{ digest.source_statistics.cleaned_candidates }}<br>{% endif %}
+                    {% if digest.source_statistics.final_llm_candidates is defined %}<strong>final_llm_candidates:</strong> {{ digest.source_statistics.final_llm_candidates }}<br>{% endif %}
                     {% if digest.source_statistics.selected_items is defined %}<strong>selected_items:</strong> {{ digest.source_statistics.selected_items }}<br>{% endif %}
+                    {% if digest.source_statistics.appendix_items is defined %}<strong>appendix_items:</strong> {{ digest.source_statistics.appendix_items }}<br>{% endif %}
+                    {% if digest.source_statistics.dropped_items is defined %}<strong>dropped_items:</strong> {{ digest.source_statistics.dropped_items }}<br>{% endif %}
+                    {% if digest.source_statistics.moved_from_main_to_appendix is defined %}<strong>moved_from_main_to_appendix:</strong> {{ digest.source_statistics.moved_from_main_to_appendix }}<br>{% endif %}
                     {% if digest.source_statistics.source_count is defined %}<strong>source_count:</strong> {{ digest.source_statistics.source_count }}<br>{% endif %}
+                    {% if digest.source_statistics.no_published_at_count is defined %}<strong>no_published_at_count:</strong> {{ digest.source_statistics.no_published_at_count }}<br>{% endif %}
+                    {% if digest.source_statistics.no_published_at_selected_count is defined %}<strong>no_published_at_selected_count:</strong> {{ digest.source_statistics.no_published_at_selected_count }}<br>{% endif %}
                     {% if digest.source_statistics.international_count is defined and digest.source_statistics.international_count is not none %}<strong>international_count:</strong> {{ digest.source_statistics.international_count }}<br>{% endif %}
-                    {% if digest.source_statistics.chinese_count is defined and digest.source_statistics.chinese_count is not none %}<strong>chinese_count:</strong> {{ digest.source_statistics.chinese_count }}{% endif %}
+                    {% if digest.source_statistics.chinese_count is defined and digest.source_statistics.chinese_count is not none %}<strong>chinese_count:</strong> {{ digest.source_statistics.chinese_count }}<br>{% endif %}
+                    {% if digest.source_statistics.chinese_shortage_reason %}<strong>chinese_shortage_reason:</strong> {{ digest.source_statistics.chinese_shortage_reason }}<br>{% endif %}
+                    {% if digest.source_statistics.research_shortage_reason %}<strong>research_shortage_reason:</strong> {{ digest.source_statistics.research_shortage_reason }}<br>{% endif %}
+                    {% if digest.source_statistics.source_distribution %}<strong>source_distribution:</strong><br>{% for key, value in digest.source_statistics.source_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
+                    {% if digest.source_statistics.category_distribution %}<strong>category_distribution:</strong><br>{% for key, value in digest.source_statistics.category_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
+                    {% if digest.source_statistics.final_candidate_source_distribution %}<strong>final_candidate_source_distribution:</strong><br>{% for key, value in digest.source_statistics.final_candidate_source_distribution.items() %}&nbsp;&nbsp;{{ key }}: {{ value }}<br>{% endfor %}{% endif %}
                   </td>
                 </tr>
               </table>

@@ -58,10 +58,21 @@ class AppendixItem(BaseModel):
 class SourceStatistics(BaseModel):
     total_candidates: int = 0
     cleaned_candidates: int = 0
+    final_llm_candidates: int = 0
     selected_items: int = 0
+    appendix_items: int = 0
+    dropped_items: int = 0
+    moved_from_main_to_appendix: int = 0
     source_count: int = 0
     international_count: Optional[int] = None
     chinese_count: Optional[int] = None
+    no_published_at_count: int = 0
+    no_published_at_selected_count: int = 0
+    source_distribution: dict[str, int] = Field(default_factory=dict)
+    category_distribution: dict[str, int] = Field(default_factory=dict)
+    final_candidate_source_distribution: dict[str, int] = Field(default_factory=dict)
+    research_shortage_reason: Optional[str] = None
+    chinese_shortage_reason: Optional[str] = None
 
 
 class DailyDigest(BaseModel):

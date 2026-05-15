@@ -8,8 +8,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from src.config import load_digest_policy
 from src.models import CandidateNews
 from src.processors.balancer import DEFAULT_SOURCE_QUOTAS, balance_candidates_by_source_type
-from src.processors.candidate_scorer import score_candidate
-from src.processors.cleaner import clean_candidates
+from src.processors.candidate_scorer import is_probable_ai_github_project, score_candidate
+from src.processors.cleaner import clean_candidates, parse_candidate_datetime
 
 _TRACKING_PARAMS = {
     'utm_source',
@@ -231,6 +231,56 @@ def _source_distribution(candidates: list[CandidateNews]) -> dict[str, int]:
     return dict(sorted(Counter(item.source_type or "unknown" for item in candidates).items()))
 
 
+def _filter_github_ai_false_positives(candidates: list[CandidateNews]) -> tuple[list[CandidateNews], int]:
+    filtered: list[CandidateNews] = []
+    dropped = 0
+    for item in candidates:
+        if item.source_type == "github_trending" and not is_probable_ai_github_project(
+            item.title,
+            item.summary_or_snippet or "",
+        ):
+            dropped += 1
+            continue
+        filtered.append(item)
+    return filtered, dropped
+
+
+def _has_published_at(item: CandidateNews) -> bool:
+    return parse_candidate_datetime(item.published_at) is not None
+
+
+def _limit_no_date_candidates(
+    selected: list[CandidateNews],
+    ranked: list[CandidateNews],
+    max_candidates: int,
+) -> list[CandidateNews]:
+    no_date_cap = max(2, round(max_candidates * 0.18))
+    final: list[CandidateNews] = []
+    selected_ids: set[str] = set()
+    no_date_count = 0
+
+    for item in selected:
+        has_date = _has_published_at(item)
+        if not has_date and no_date_count >= no_date_cap:
+            continue
+        final.append(item)
+        selected_ids.add(item.id)
+        if not has_date:
+            no_date_count += 1
+        if len(final) >= max_candidates:
+            return final[:max_candidates]
+
+    for item in ranked:
+        if item.id in selected_ids or not _has_published_at(item):
+            continue
+        final.append(item)
+        selected_ids.add(item.id)
+        if len(final) >= max_candidates:
+            break
+
+    return final[:max_candidates]
+
+
 def _scaled_quotas_for_limit(quotas: dict[str, object], max_candidates: int) -> dict[str, int]:
     normalized: dict[str, int] = {}
     for key, value in quotas.items():
@@ -308,7 +358,8 @@ def prepare_llm_candidates(candidates: list[CandidateNews], lookback_hours: int,
     cleaned = clean_candidates(candidates, lookback_hours=lookback_hours)
     url_deduped = deduplicate_by_url(cleaned)
     title_deduped, dropped_duplicates_sample = deduplicate_by_title(url_deduped)
-    ranked = rank_candidates_lightweight(title_deduped)
+    ai_filtered, github_false_positive_count = _filter_github_ai_false_positives(title_deduped)
+    ranked = rank_candidates_lightweight(ai_filtered)
 
     policy = load_digest_policy()
     quotas = policy.get('candidate_quotas', DEFAULT_SOURCE_QUOTAS)
@@ -318,16 +369,20 @@ def prepare_llm_candidates(candidates: list[CandidateNews], lookback_hours: int,
     scaled_quotas = _scaled_quotas_for_limit(quotas, max_candidates)
     balanced = balance_candidates_by_source_type(ranked, max_candidates=max_candidates, quotas=scaled_quotas)
     overflow_filled = _fill_balanced_overflow(ranked, balanced, max_candidates=max_candidates)
-    final_candidates = trim_candidates(overflow_filled, max_candidates=max_candidates)
+    date_capped = _limit_no_date_candidates(overflow_filled, ranked, max_candidates=max_candidates)
+    final_candidates = trim_candidates(date_capped, max_candidates=max_candidates)
 
     _LAST_SELECTION_REPORT = {
         "raw_count": len(candidates),
         "cleaned_count": len(cleaned),
         "url_dedup_count": len(url_deduped),
         "title_dedup_count": len(title_deduped),
+        "github_false_positive_count": github_false_positive_count,
+        "no_published_at_count": sum(1 for item in ai_filtered if not _has_published_at(item)),
+        "no_published_at_selected_count": sum(1 for item in final_candidates if not _has_published_at(item)),
         "candidate_limit": max_candidates,
         "final_count": len(final_candidates),
-        "source_distribution_before": _source_distribution(title_deduped),
+        "source_distribution_before": _source_distribution(ai_filtered),
         "source_distribution_after_strict_quota": _source_distribution(balanced),
         "source_distribution_after": _source_distribution(final_candidates),
         "dropped_duplicates_sample": dropped_duplicates_sample,

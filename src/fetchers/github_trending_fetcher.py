@@ -7,12 +7,12 @@ from bs4 import BeautifulSoup
 
 from src.fetchers.base import BaseFetcher
 from src.models import CandidateNews, SourceConfig
+from src.processors.candidate_scorer import is_probable_ai_github_project
 from src.utils.http_utils import safe_get
 
 
 class GitHubTrendingFetcher(BaseFetcher):
     DEFAULT_ENDPOINT = 'https://github.com/trending'
-    KEYWORDS = ('ai', 'llm', 'agent', 'rag', 'transformer', 'diffusion', 'model')
 
     def __init__(self, source_config: SourceConfig | dict[str, Any]) -> None:
         super().__init__(source_config)
@@ -50,8 +50,7 @@ class GitHubTrendingFetcher(BaseFetcher):
             description_tag = article.select_one('p')
             description = description_tag.get_text(' ', strip=True) if description_tag else ''
 
-            searchable = f'{title} {description}'.lower()
-            if not any(keyword in searchable for keyword in self.KEYWORDS):
+            if not is_probable_ai_github_project(title, description):
                 continue
 
             items.append(

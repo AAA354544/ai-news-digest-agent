@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from src.config import get_enabled_sources, load_app_config
+from src.config import get_enabled_sources, load_app_config, load_sources_config
 from src.models import CandidateNews
 from src.processors.prompts import recommend_llm_candidate_limit
 
@@ -70,14 +70,72 @@ def _run_fetcher(source: dict[str, Any]) -> list[CandidateNews]:
     return []
 
 
+def _max_items_for_source(source: dict[str, Any], lookback_hours: int) -> int:
+    source_type = str(source.get("type") or "").strip()
+    configured = source.get("max_items")
+    try:
+        configured_max = int(configured) if configured is not None else 20
+    except (TypeError, ValueError):
+        configured_max = 20
+
+    hours = max(1, int(lookback_hours or 24))
+    if hours <= 24:
+        caps = {"hn_algolia": 18, "github_trending": 5, "arxiv": 12}
+        default_cap = 12
+    elif hours <= 48:
+        caps = {"hn_algolia": 24, "github_trending": 6, "arxiv": 16}
+        default_cap = 18
+    elif hours <= 72:
+        caps = {"hn_algolia": 30, "github_trending": 8, "arxiv": 22}
+        default_cap = 24
+    else:
+        caps = {"hn_algolia": 36, "github_trending": 10, "arxiv": 28}
+        default_cap = 30
+
+    return max(1, min(max(configured_max, default_cap), caps.get(source_type, default_cap)))
+
+
+def _source_for_fetch_window(source: dict[str, Any], lookback_hours: int) -> dict[str, Any]:
+    adjusted = dict(source)
+    adjusted["max_items"] = _max_items_for_source(source, lookback_hours)
+    return adjusted
+
+
+def _region_count(candidates: list[CandidateNews], region_name: str) -> int:
+    aliases = {"chinese": {"chinese", "china", "zh", "cn"}, "international": {"international", "global", "en"}}
+    wanted = aliases.get(region_name, {region_name})
+    return sum(1 for item in candidates if (item.region or "").strip().lower() in wanted)
+
+
+def _chinese_shortage_reason(raw_candidates: list[CandidateNews], final_candidates: list[CandidateNews]) -> str | None:
+    if _region_count(final_candidates, "chinese") > 0:
+        return None
+
+    sources_data = load_sources_config()
+    source_rows = sources_data.get("sources", []) if isinstance(sources_data, dict) else sources_data
+    chinese_sources = [
+        source
+        for source in source_rows
+        if isinstance(source, dict) and str(source.get("region", "")).strip().lower() in {"chinese", "china", "zh", "cn"}
+    ]
+    enabled_chinese_sources = [source for source in chinese_sources if bool(source.get("enabled", True))]
+    if not enabled_chinese_sources:
+        return "no_chinese_sources_enabled"
+    if _region_count(raw_candidates, "chinese") == 0:
+        return "enabled_chinese_sources_returned_zero_raw_candidates"
+    return "chinese_candidates_dropped_before_final_llm_pool"
+
+
 def run_fetch_step() -> Path:
+    cfg = load_app_config()
     enabled_sources = get_enabled_sources()
     all_candidates: list[CandidateNews] = []
     for source in enabled_sources:
         source_name = source.get("name", "UNKNOWN")
         try:
-            items = _run_fetcher(source)
-            print(f"[fetch] {source_name}: {len(items)}")
+            fetch_source = _source_for_fetch_window(source, cfg.digest_lookback_hours)
+            items = _run_fetcher(fetch_source)
+            print(f"[fetch] {source_name}: {len(items)} (max_items={fetch_source.get('max_items')})")
             all_candidates.extend(items)
         except Exception as exc:
             print(f"[fetch] failed {source_name}: {exc}")
@@ -155,8 +213,10 @@ def run_analyze_step(limit_for_test: int | None = None) -> Path:
     total_candidates = len(candidates)
     try:
         raw_path = _find_latest_file("data/raw", "*_raw_candidates.json")
-        total_candidates = len(_load_candidates(raw_path))
+        raw_candidates = _load_candidates(raw_path)
+        total_candidates = len(raw_candidates)
     except Exception:
+        raw_candidates = []
         pass
 
     source_count = len({(c.source_name or "").strip().lower() for c in candidates if (c.source_name or "").strip()})
@@ -172,10 +232,28 @@ def run_analyze_step(limit_for_test: int | None = None) -> Path:
     stats_context = {
         "total_candidates": total_candidates,
         "cleaned_candidates": len(candidates),
+        "final_llm_candidates": len(limited),
         "source_count": source_count,
         "international_count": international_count,
         "chinese_count": chinese_count,
+        "chinese_shortage_reason": _chinese_shortage_reason(raw_candidates, candidates),
     }
+
+    try:
+        selection_report_path = _find_latest_file("data/cleaned", "*_candidate_selection_report.json")
+        selection_report = json.loads(selection_report_path.read_text(encoding="utf-8"))
+        if isinstance(selection_report, dict):
+            for key in (
+                "candidate_limit",
+                "final_count",
+                "no_published_at_count",
+                "no_published_at_selected_count",
+                "source_distribution_after",
+            ):
+                if key in selection_report:
+                    stats_context[key] = selection_report[key]
+    except Exception:
+        pass
 
     digest = analyze_candidates_with_llm(limited, config=cfg, stats_context=stats_context)
     return save_digest(digest, output_dir="data/digested")

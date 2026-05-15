@@ -2,12 +2,13 @@
 
 import json
 import re
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 from src.config import AppConfig, load_app_config
-from src.models import CandidateNews, DailyDigest, SourceStatistics
+from src.models import AppendixItem, CandidateNews, DailyDigest, CategoryGroup, SourceStatistics
 from src.processors.prompts import (
     build_digest_system_prompt,
     build_digest_user_prompt,
@@ -41,6 +42,22 @@ _CATEGORY_ALIASES = {
     "安全政策与风险": "政策安全与风险",
     "其他": "产业与公司动态",
 }
+
+_HN_SOURCE_MARKERS = ("hacker news", "hn_algolia", "ycombinator")
+_RESEARCH_MARKERS = ("arxiv", "paper", "research", "benchmark", "论文", "科研", "基准")
+
+
+def _clean_cn_text(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    text = re.sub(r"^\s*(show hn|ask hn)\s*:\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+[-|]\s*(show hn|ask hn|blog)\s*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bBlog\b", "", text)
+    text = re.sub(r"\bsoon\b", "即将", text, flags=re.IGNORECASE)
+    text = text.replace("代理 AI", "AI 智能体")
+    text = text.replace("代理系统", "智能体系统")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _extract_json_core(text: str) -> str:
@@ -282,6 +299,111 @@ def _estimate_region_counts(candidates: list[CandidateNews]) -> tuple[int, int]:
     return international_count, chinese_count
 
 
+def _item_sources(item: Any) -> list[str]:
+    return [str(name).strip() for name in (getattr(item, "source_names", []) or []) if str(name).strip()]
+
+
+def _is_hn_item(item: Any) -> bool:
+    source_text = " ".join(_item_sources(item)).lower()
+    link_text = " ".join(str(link or "") for link in (getattr(item, "links", []) or [])).lower()
+    return any(marker in source_text or marker in link_text for marker in _HN_SOURCE_MARKERS)
+
+
+def _is_low_trust_hn_item(item: Any) -> bool:
+    if not _is_hn_item(item):
+        return False
+    links = [str(link or "").lower() for link in (getattr(item, "links", []) or []) if str(link or "").strip()]
+    return not links or all("news.ycombinator.com" in link for link in links)
+
+
+def _is_research_item(category: str, item: Any) -> bool:
+    text = " ".join(
+        [
+            category,
+            str(getattr(item, "title", "") or ""),
+            " ".join(str(tag) for tag in (getattr(item, "tags", []) or [])),
+            " ".join(_item_sources(item)),
+            " ".join(str(link) for link in (getattr(item, "links", []) or [])),
+        ]
+    ).lower()
+    return any(marker in text for marker in _RESEARCH_MARKERS)
+
+
+def _hn_main_cap(lookback_hours: int) -> int:
+    hours = max(1, int(lookback_hours or 24))
+    if hours <= 48:
+        return 4
+    if hours <= 72:
+        return 5
+    return 8
+
+
+def _source_distribution_from_digest(digest: DailyDigest) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for group in digest.main_digest:
+        for item in group.items:
+            sources = _item_sources(item) or ["unknown"]
+            for source in sources:
+                counts[source] += 1
+    return dict(sorted(counts.items()))
+
+
+def _category_distribution_from_digest(digest: DailyDigest) -> dict[str, int]:
+    return {group.category_name: len(group.items) for group in digest.main_digest if group.items}
+
+
+def _research_shortage_reason(digest: DailyDigest, fallback_candidates: list[CandidateNews] | None = None) -> str | None:
+    selected = sum(len(group.items) for group in digest.main_digest)
+    if selected <= 0:
+        return None
+    target_min = max(1, round(selected * 0.20))
+    research_selected = sum(
+        1
+        for group in digest.main_digest
+        for item in group.items
+        if _is_research_item(group.category_name, item)
+    )
+    if research_selected >= target_min:
+        return None
+    if fallback_candidates is not None:
+        research_candidates = sum(
+            1
+            for item in fallback_candidates
+            if item.source_type == "arxiv"
+            or (item.category_hint or "").lower() == "research"
+            or "arxiv" in (item.source_name or "").lower()
+        )
+        if research_candidates < target_min:
+            return f"research_candidates_below_target: {research_candidates}/{target_min}"
+    return f"research_selected_below_soft_target: {research_selected}/{target_min}"
+
+
+def _clean_digest_item(item: Any) -> Any:
+    updates = {
+        "title": _clean_cn_text(getattr(item, "title", "") or ""),
+        "summary": _clean_cn_text(getattr(item, "summary", "") or ""),
+        "why_it_matters": _clean_cn_text(getattr(item, "why_it_matters", "") or ""),
+        "insights": _clean_cn_text(getattr(item, "insights", "") or ""),
+    }
+    if hasattr(item, "model_copy"):
+        return item.model_copy(update=updates)
+    for key, value in updates.items():
+        setattr(item, key, value)
+    return item
+
+
+def _clean_appendix_item(item: AppendixItem) -> AppendixItem:
+    updates = {
+        "title": _clean_cn_text(item.title),
+        "brief_summary": _clean_cn_text(item.brief_summary),
+    }
+    if hasattr(item, "model_copy"):
+        return item.model_copy(update=updates)
+    item.title = updates["title"]
+    item.brief_summary = updates["brief_summary"]
+    return item
+
+
 def _dedupe_appendix_against_main(digest: DailyDigest) -> DailyDigest:
     main_links = {
         _normalize_url(link)
@@ -304,21 +426,147 @@ def _dedupe_appendix_against_main(digest: DailyDigest) -> DailyDigest:
     return digest
 
 
+def _main_item_to_appendix(item: Any) -> AppendixItem | None:
+    links = getattr(item, "links", []) or []
+    link = next((str(link).strip() for link in links if str(link).strip()), "")
+    brief_summary = str(getattr(item, "summary", "") or "").strip()
+    if not link or not brief_summary:
+        return None
+
+    source_names = getattr(item, "source_names", []) or []
+    source = ", ".join(str(name).strip() for name in source_names if str(name).strip())
+    return AppendixItem(
+        title=str(getattr(item, "title", "") or "Untitled appendix item").strip() or "Untitled appendix item",
+        link=link,
+        source=source or "Main digest overflow",
+        brief_summary=brief_summary,
+    )
+
+
+def enforce_digest_shape(
+    digest: DailyDigest,
+    config: AppConfig | None = None,
+) -> DailyDigest:
+    """Apply final program-side item caps before a digest is returned or saved."""
+    cfg = config or load_app_config()
+    shape = recommend_digest_shape(cfg.digest_lookback_hours)
+    main_max = max(0, int(shape["main_max"]))
+    appendix_max = max(0, int(shape["appendix_max"]))
+    hn_cap = _hn_main_cap(cfg.digest_lookback_hours)
+    original_main_count = sum(len(group.items) for group in digest.main_digest)
+    original_appendix_count = len(digest.appendix or [])
+
+    grouped: dict[str, list[Any]] = {category: [] for category in CANONICAL_CATEGORIES}
+    for group in digest.main_digest:
+        raw_category = str(getattr(group, "category_name", "") or "").strip()
+        category = _CATEGORY_ALIASES.get(raw_category, raw_category)
+        if category not in grouped:
+            category = "产业与公司动态"
+        cleaned_items = [_clean_digest_item(item) for item in (getattr(group, "items", []) or [])]
+        grouped[category].extend(sorted(cleaned_items, key=lambda item: 1 if _is_low_trust_hn_item(item) else 0))
+
+    kept_count = 0
+    hn_count = 0
+    overflow_appendix: list[AppendixItem] = []
+    normalized_groups: list[CategoryGroup] = []
+    for category in CANONICAL_CATEGORIES:
+        kept_items = []
+        for item in grouped[category]:
+            is_hn = _is_hn_item(item)
+            if is_hn and hn_count >= hn_cap:
+                appendix_item = _main_item_to_appendix(item)
+                if appendix_item is not None:
+                    overflow_appendix.append(appendix_item)
+                continue
+            if kept_count < main_max:
+                kept_items.append(item)
+                kept_count += 1
+                if is_hn:
+                    hn_count += 1
+                continue
+            appendix_item = _main_item_to_appendix(item)
+            if appendix_item is not None:
+                overflow_appendix.append(appendix_item)
+        normalized_groups.append(CategoryGroup(category_name=category, items=kept_items))
+
+    if hasattr(digest, "model_copy"):
+        digest = digest.model_copy(update={"main_digest": normalized_groups})
+    else:
+        digest.main_digest = normalized_groups
+
+    main_links = {
+        _normalize_url(link)
+        for group in digest.main_digest
+        for item in group.items
+        for link in (item.links or [])
+        if _normalize_url(link)
+    }
+
+    filtered_appendix: list[AppendixItem] = []
+    seen_appendix_links: set[str] = set()
+    overflow_links = {_normalize_url(item.link) for item in overflow_appendix if _normalize_url(item.link)}
+    for item in [*overflow_appendix, *[_clean_appendix_item(item) for item in (digest.appendix or [])]]:
+        link = _normalize_url(getattr(item, "link", "") or "")
+        brief = str(getattr(item, "brief_summary", "") or "").strip()
+        if not link or not brief:
+            continue
+        if link in main_links or link in seen_appendix_links:
+            continue
+        filtered_appendix.append(item)
+        seen_appendix_links.add(link)
+        if len(filtered_appendix) >= appendix_max:
+            break
+
+    digest.appendix = filtered_appendix
+    moved_links = {_normalize_url(item.link) for item in filtered_appendix if _normalize_url(item.link) in overflow_links}
+    final_main_count = sum(len(group.items) for group in digest.main_digest)
+    final_appendix_count = len(digest.appendix or [])
+    stats = digest.source_statistics if digest.source_statistics is not None else SourceStatistics()
+    digest.source_statistics = stats.model_copy(
+        update={
+            "appendix_items": final_appendix_count,
+            "moved_from_main_to_appendix": len(moved_links),
+            "dropped_items": max(0, original_main_count + original_appendix_count - final_main_count - final_appendix_count),
+        }
+    )
+    return digest
+
+
 def finalize_digest_statistics(
     digest: DailyDigest,
-    stats_context: dict[str, int] | None = None,
+    stats_context: dict[str, Any] | None = None,
     fallback_candidates: list[CandidateNews] | None = None,
 ) -> DailyDigest:
     """Program-side statistics normalization to reduce dependence on LLM output."""
     actual_selected_items = sum(len(group.items) for group in digest.main_digest)
 
     stats = digest.source_statistics if digest.source_statistics is not None else SourceStatistics()
-    updates: dict[str, int] = {"selected_items": actual_selected_items}
+    updates: dict[str, Any] = {
+        "selected_items": actual_selected_items,
+        "appendix_items": len(digest.appendix or []),
+        "source_distribution": _source_distribution_from_digest(digest),
+        "category_distribution": _category_distribution_from_digest(digest),
+    }
 
     if stats_context:
-        for key in ("total_candidates", "cleaned_candidates", "source_count", "international_count", "chinese_count"):
+        for key in (
+            "total_candidates",
+            "cleaned_candidates",
+            "final_llm_candidates",
+            "source_count",
+            "international_count",
+            "chinese_count",
+            "no_published_at_count",
+            "no_published_at_selected_count",
+            "chinese_shortage_reason",
+        ):
             if key in stats_context:
-                updates[key] = int(stats_context[key])
+                value = stats_context[key]
+                updates[key] = int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else value
+        if isinstance(stats_context.get("source_distribution_after"), dict):
+            updates["final_candidate_source_distribution"] = {
+                str(key): int(value) for key, value in stats_context["source_distribution_after"].items()
+            }
 
     if fallback_candidates:
         if "cleaned_candidates" not in updates:
@@ -333,6 +581,20 @@ def finalize_digest_statistics(
             intl, zh = _estimate_region_counts(fallback_candidates)
             updates.setdefault("international_count", intl)
             updates.setdefault("chinese_count", zh)
+
+    if "final_llm_candidates" not in updates:
+        existing_final = int(getattr(stats, "final_llm_candidates", 0) or 0)
+        existing_cleaned = int(updates.get("cleaned_candidates") or getattr(stats, "cleaned_candidates", 0) or 0)
+        if existing_final > 0:
+            updates["final_llm_candidates"] = existing_final
+        elif existing_cleaned > 0:
+            updates["final_llm_candidates"] = existing_cleaned
+
+    shortage_reason = _research_shortage_reason(digest, fallback_candidates=fallback_candidates)
+    if shortage_reason:
+        updates["research_shortage_reason"] = shortage_reason
+    if int(updates.get("chinese_count") or 0) == 0 and not updates.get("chinese_shortage_reason"):
+        updates["chinese_shortage_reason"] = "no_chinese_candidates_in_final_llm_pool_or_no_chinese_sources_enabled"
 
     digest.source_statistics = stats.model_copy(update=updates)
     return digest
@@ -368,6 +630,7 @@ def analyze_candidates_with_llm(
             digest = DailyDigest.model_validate(payload)
         else:
             digest = DailyDigest(**payload)
+        digest = enforce_digest_shape(digest, config=cfg)
         digest = _dedupe_appendix_against_main(digest)
         return finalize_digest_statistics(digest, stats_context=stats_context, fallback_candidates=candidates)
     except Exception as exc:
@@ -381,9 +644,10 @@ def analyze_candidates_with_llm(
 
 
 def save_digest(digest: DailyDigest, output_dir: str = "data/digested") -> Path:
+    cfg = load_app_config()
+    digest = enforce_digest_shape(digest, config=cfg)
     digest = _dedupe_appendix_against_main(digest)
     digest = finalize_digest_statistics(digest)
-    cfg = load_app_config()
     shape = recommend_digest_shape(cfg.digest_lookback_hours)
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
