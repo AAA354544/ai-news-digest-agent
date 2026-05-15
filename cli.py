@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from src.config import validate_runtime_config
 from src.notifiers.recipients import get_enabled_recipients, load_recipients, parse_email_list
 from src.pipeline import (
     run_analyze_step,
@@ -42,7 +43,8 @@ def show_status() -> None:
     console.print(
         Panel(
             "[bold]ai-news-digest-agent[/bold]\n"
-            "Modules 0-5 complete, modules 6-9 implemented (pending verification)."
+            "Core pipeline + CLI + Streamlit + GitHub Actions are ready.\n"
+            "Current stage: Optimization Round 1 stabilization (pending verification)."
         )
     )
 
@@ -56,6 +58,31 @@ def main(ctx: typer.Context) -> None:
 @app.command()
 def status() -> None:
     show_status()
+
+
+@app.command("preflight")
+def preflight_cmd(
+    mode: str = typer.Option(
+        "local",
+        "--mode",
+        help="Validation mode: local | send-email | github-actions-report | github-actions-send",
+    ),
+) -> None:
+    result = validate_runtime_config(mode=mode)
+    warnings = result.get("warnings", []) if isinstance(result, dict) else []
+    errors = result.get("errors", []) if isinstance(result, dict) else []
+    ok = bool(result.get("ok")) if isinstance(result, dict) else False
+
+    if warnings:
+        for warning in warnings:
+            console.print(f"[yellow][warning][/yellow] {warning}")
+
+    if not ok:
+        for error in errors:
+            console.print(f"[red][error][/red] {error}")
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]Preflight passed.[/green] mode={mode}")
 
 
 @app.command("fetch")

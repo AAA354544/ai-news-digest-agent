@@ -15,6 +15,7 @@ from src.config import load_app_config
 from src.models import CandidateNews
 from src.processors.cleaner import clean_candidates
 from src.processors.deduplicator import deduplicate_by_url, prepare_llm_candidates
+from src.processors.prompts import recommend_llm_candidate_limit
 
 
 def _find_latest_raw_file(raw_dir: Path) -> Path | None:
@@ -62,17 +63,18 @@ def main() -> None:
     raw_candidates = _load_candidates(latest_raw)
     cleaned_only = clean_candidates(raw_candidates, lookback_hours=cfg.digest_lookback_hours)
     deduped_only = deduplicate_by_url(cleaned_only)
+    candidate_limit = recommend_llm_candidate_limit(cfg.digest_lookback_hours, cfg.max_llm_candidates)
     final_candidates = prepare_llm_candidates(
         raw_candidates,
         lookback_hours=cfg.digest_lookback_hours,
-        max_candidates=cfg.max_llm_candidates,
+        max_candidates=candidate_limit,
     )
 
     print(f'raw candidates count: {len(raw_candidates)}')
     print(f'after cleaning count: {len(cleaned_only)}')
     print(f'after URL dedup count: {len(deduped_only)}')
     print(f'final cleaned candidates count: {len(final_candidates)}')
-    print(f'max llm candidates: {cfg.max_llm_candidates}')
+    print(f'max llm candidates: {candidate_limit}')
 
     dist = Counter(item.source_type for item in final_candidates)
     print('source_type distribution:')

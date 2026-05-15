@@ -7,6 +7,7 @@ from typing import Any
 
 from src.config import get_enabled_sources, load_app_config
 from src.models import CandidateNews
+from src.processors.prompts import recommend_llm_candidate_limit
 
 
 def _find_latest_file(input_dir: str, pattern: str) -> Path:
@@ -90,7 +91,7 @@ def run_fetch_step() -> Path:
 
 def run_clean_step() -> Path:
     from src.processors.cleaner import clean_candidates
-    from src.processors.deduplicator import deduplicate_by_url, prepare_llm_candidates
+    from src.processors.deduplicator import deduplicate_by_url, get_last_selection_report, prepare_llm_candidates
 
     cfg = load_app_config()
     raw_path = _find_latest_file("data/raw", "*_raw_candidates.json")
@@ -101,13 +102,37 @@ def run_clean_step() -> Path:
     final_candidates = prepare_llm_candidates(
         raw_candidates,
         lookback_hours=cfg.digest_lookback_hours,
-        max_candidates=cfg.max_llm_candidates,
+        max_candidates=recommend_llm_candidate_limit(cfg.digest_lookback_hours, cfg.max_llm_candidates),
     )
-
-    print(f"[clean] raw={len(raw_candidates)}, cleaned={len(cleaned_only)}, dedup={len(deduped_only)}, final={len(final_candidates)}")
 
     out_dir = Path("data/cleaned")
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    selection_report = get_last_selection_report()
+    title_dedup_count = selection_report.get("title_dedup_count", len(deduped_only))
+    source_distribution_after = selection_report.get("source_distribution_after", {})
+    if isinstance(source_distribution_after, dict) and source_distribution_after:
+        distribution_text = ", ".join(f"{key}={value}" for key, value in source_distribution_after.items())
+    else:
+        distribution_text = "none"
+
+    effective_candidate_limit = recommend_llm_candidate_limit(cfg.digest_lookback_hours, cfg.max_llm_candidates)
+    print(
+        "[clean] "
+        f"raw={len(raw_candidates)}, "
+        f"cleaned={len(cleaned_only)}, "
+        f"url_dedup={len(deduped_only)}, "
+        f"title_dedup={title_dedup_count}, "
+        f"final={len(final_candidates)}, "
+        f"candidate_limit={effective_candidate_limit}"
+    )
+    print(f"[clean] final source distribution: {distribution_text}")
+
+    if selection_report:
+        report_path = out_dir / f"{date.today().isoformat()}_candidate_selection_report.json"
+        report_path.write_text(json.dumps(selection_report, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"[clean] selection report: {report_path}")
+
     out_path = out_dir / f"{date.today().isoformat()}_cleaned_candidates.json"
     out_path.write_text(json.dumps(_to_json_compatible(final_candidates), ensure_ascii=False, indent=2), encoding="utf-8")
     return out_path
@@ -120,11 +145,39 @@ def run_analyze_step(limit_for_test: int | None = None) -> Path:
     cleaned_path = _find_latest_file("data/cleaned", "*_cleaned_candidates.json")
     candidates = _load_candidates(cleaned_path)
 
-    limit = limit_for_test if limit_for_test is not None else cfg.max_llm_candidates
+    limit = limit_for_test if limit_for_test is not None else recommend_llm_candidate_limit(
+        cfg.digest_lookback_hours,
+        cfg.max_llm_candidates,
+    )
     limit = max(1, limit)
     limited = candidates[: min(len(candidates), limit)]
 
-    digest = analyze_candidates_with_llm(limited, config=cfg)
+    total_candidates = len(candidates)
+    try:
+        raw_path = _find_latest_file("data/raw", "*_raw_candidates.json")
+        total_candidates = len(_load_candidates(raw_path))
+    except Exception:
+        pass
+
+    source_count = len({(c.source_name or "").strip().lower() for c in candidates if (c.source_name or "").strip()})
+    chinese_count = 0
+    international_count = 0
+    for c in candidates:
+        region = (c.region or "").strip().lower()
+        if region in {"chinese", "china", "zh", "cn"}:
+            chinese_count += 1
+        elif region:
+            international_count += 1
+
+    stats_context = {
+        "total_candidates": total_candidates,
+        "cleaned_candidates": len(candidates),
+        "source_count": source_count,
+        "international_count": international_count,
+        "chinese_count": chinese_count,
+    }
+
+    digest = analyze_candidates_with_llm(limited, config=cfg, stats_context=stats_context)
     return save_digest(digest, output_dir="data/digested")
 
 

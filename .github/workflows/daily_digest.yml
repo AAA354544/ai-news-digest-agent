@@ -2,12 +2,33 @@
 
 on:
   schedule:
-    - cron: "0 14 * * *"
+    - cron: "17 14 * * *"
   workflow_dispatch:
+    inputs:
+      topic:
+        description: "Digest topic override (optional)"
+        required: false
+        default: ""
+        type: string
+      send_email:
+        description: "Send email after pipeline"
+        required: true
+        default: true
+        type: boolean
+      llm_limit:
+        description: "LLM candidate limit (0 means use env default)"
+        required: false
+        default: "0"
+        type: string
+
+concurrency:
+  group: daily-ai-news-digest-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   run-daily-digest:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,7 +43,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pipeline and send email
+      - name: Preflight config check
         env:
           DIGEST_TOPIC: ${{ secrets.DIGEST_TOPIC }}
           DIGEST_LOOKBACK_HOURS: ${{ secrets.DIGEST_LOOKBACK_HOURS }}
@@ -43,4 +64,77 @@ jobs:
           DEFAULT_SEND_TIME: ${{ secrets.DEFAULT_SEND_TIME }}
           TIMEZONE: ${{ secrets.TIMEZONE }}
         run: |
-          python cli.py run-pipeline --send-email
+          python --version
+          echo "UTC now: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "Workspace: $(pwd)"
+
+          SEND_EMAIL=true
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SEND_EMAIL="${{ inputs.send_email }}"
+          fi
+
+          MODE="github-actions-send"
+          if [ "$SEND_EMAIL" != "true" ]; then
+            MODE="github-actions-report"
+          fi
+
+          python cli.py preflight --mode "$MODE"
+
+      - name: Run pipeline
+        env:
+          DIGEST_TOPIC: ${{ secrets.DIGEST_TOPIC }}
+          DIGEST_LOOKBACK_HOURS: ${{ secrets.DIGEST_LOOKBACK_HOURS }}
+          MAX_LLM_CANDIDATES: ${{ secrets.MAX_LLM_CANDIDATES }}
+          MAIN_DIGEST_MIN_ITEMS: ${{ secrets.MAIN_DIGEST_MIN_ITEMS }}
+          MAIN_DIGEST_MAX_ITEMS: ${{ secrets.MAIN_DIGEST_MAX_ITEMS }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_BASE_URL: ${{ secrets.ZHIPU_BASE_URL }}
+          ZHIPU_MODEL: ${{ secrets.ZHIPU_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USE_SSL: ${{ secrets.SMTP_USE_SSL }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SMTP_AUTH_CODE: ${{ secrets.SMTP_AUTH_CODE }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          DEFAULT_SEND_TIME: ${{ secrets.DEFAULT_SEND_TIME }}
+          TIMEZONE: ${{ secrets.TIMEZONE }}
+        run: |
+          SEND_EMAIL=true
+          DISPATCH_TOPIC=""
+          LLM_LIMIT_INPUT="0"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SEND_EMAIL="${{ inputs.send_email }}"
+            DISPATCH_TOPIC="${{ inputs.topic }}"
+            LLM_LIMIT_INPUT="${{ inputs.llm_limit }}"
+          fi
+
+          if [ -n "$DISPATCH_TOPIC" ]; then
+            export DIGEST_TOPIC="$DISPATCH_TOPIC"
+            echo "Using dispatch topic override."
+          fi
+
+          LLM_ARGS=""
+          if [ -n "$LLM_LIMIT_INPUT" ] && [ "$LLM_LIMIT_INPUT" != "0" ]; then
+            LLM_ARGS="--llm-limit $LLM_LIMIT_INPUT"
+          fi
+
+          if [ "$SEND_EMAIL" = "true" ]; then
+            python cli.py run-pipeline --send-email $LLM_ARGS
+          else
+            python cli.py run-pipeline $LLM_ARGS
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-artifacts-${{ github.run_id }}
+          path: |
+            outputs/markdown
+            outputs/html
+            data/digested
+            data/raw/*source_health*.json
+          if-no-files-found: ignore

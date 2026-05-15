@@ -1,109 +1,215 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Research &amp; Industry Digest - {{ digest.date }}</title>
+  <title>AI Daily Brief - {{ digest.date }}</title>
   <style>
-    body { margin: 0; padding: 16px; background: #f5f7fb; color: #1f2937; font-family: Arial, sans-serif; }
-    .container { max-width: 920px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
-    .hero { background: #111827; color: #f9fafb; padding: 18px 20px; }
-    .hero h1 { margin: 0 0 8px 0; font-size: 24px; }
-    .hero .meta { font-size: 14px; color: #d1d5db; }
-    .hero .stats { margin-top: 10px; font-size: 13px; color: #e5e7eb; }
-    .section { padding: 18px 20px; }
-    .section h2 { margin: 0 0 14px 0; font-size: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff; }
-    .title { font-size: 17px; margin: 0 0 8px 0; }
-    .line { margin: 6px 0; font-size: 14px; }
-    .tags { margin: 6px 0; }
-    .tag { display: inline-block; font-size: 12px; background: #ecfeff; color: #0e7490; border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 4px; }
-    ul { margin: 6px 0 0 20px; padding: 0; }
-    a { color: #2563eb; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .appendix-item { border-left: 3px solid #d1d5db; padding-left: 10px; margin-bottom: 10px; }
-    .stats-footer { background: #f3f4f6; border-top: 1px solid #e5e7eb; padding: 14px 20px; font-size: 13px; color: #374151; }
-    .footer { padding: 12px 20px; color: #6b7280; font-size: 12px; }
+    @media only screen and (max-width: 640px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .content { padding-left: 18px !important; padding-right: 18px !important; }
+      .metric-cell { display: block !important; width: 100% !important; box-sizing: border-box !important; margin-bottom: 8px !important; }
+      .hero-title { font-size: 26px !important; line-height: 34px !important; }
+    }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="hero">
-      <h1>AI Research &amp; Industry Digest - {{ digest.date }}</h1>
-      <div class="meta">Topic: {{ digest.topic }} | Date: {{ digest.date }}</div>
-      <div class="stats">
-        Selected News Count: {{ selected_count }} | Appendix Count: {{ digest.appendix | length }}
-      </div>
-    </div>
-
-    <div class="section">
-      {% for group in digest.main_digest %}
-      {% if group.items %}
-      <h2>{{ group.category_name }}</h2>
-        {% for item in group.items %}
-        <div class="card">
-          <h3 class="title">{{ item.title }}</h3>
-
-          <div class="tags">
-            {% if item.tags %}
-              {% for tag in item.tags %}
-              <span class="tag">{{ tag }}</span>
-              {% endfor %}
-            {% endif %}
-          </div>
-
-          {% if item.summary %}<div class="line"><strong>Summary:</strong> {{ item.summary }}</div>{% else %}<div class="line"><strong>Summary:</strong> N/A</div>{% endif %}
-          {% if item.why_it_matters %}<div class="line"><strong>Why It Matters:</strong> {{ item.why_it_matters }}</div>{% else %}<div class="line"><strong>Why It Matters:</strong> N/A</div>{% endif %}
-          {% if item.insights %}<div class="line"><strong>Trend Insight:</strong> {{ item.insights }}</div>{% else %}<div class="line"><strong>Trend Insight:</strong> N/A</div>{% endif %}
-          <div class="line"><strong>Source:</strong> {{ item.source_names | join(', ') if item.source_names else 'N/A' }}</div>
-
-          <div class="line"><strong>Links:</strong></div>
-          <ul>
-            {% if item.links %}
-              {% for link in item.links %}
-              <li><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link }}</a></li>
-              {% endfor %}
-            {% else %}
-              <li>No link available</li>
-            {% endif %}
-          </ul>
-        </div>
-        {% endfor %}
-      {% endif %}
-      {% endfor %}
-
-      <h2>Appendix</h2>
-      {% if digest.appendix %}
-        {% for item in digest.appendix %}
-        <div class="appendix-item">
-          <div><strong>{{ item.title }}</strong></div>
-          <div>
-            {% if item.link %}
-            <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.link }}</a>
-            {% else %}
-            No link available
-            {% endif %}
-          </div>
-          <div>Source: {{ item.source if item.source else 'N/A' }}</div>
-          <div>{{ item.brief_summary if item.brief_summary else 'N/A' }}</div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="line">No appendix items.</div>
-      {% endif %}
-    </div>
-
-    <div class="stats-footer">
-      <div><strong>Source Statistics</strong></div>
-      <div>total_candidates: {{ digest.source_statistics.total_candidates }}</div>
-      <div>cleaned_candidates: {{ digest.source_statistics.cleaned_candidates }}</div>
-      <div>selected_items: {{ digest.source_statistics.selected_items }}</div>
-      <div>source_count: {{ digest.source_statistics.source_count }}</div>
-      <div>international_count: {{ digest.source_statistics.international_count if digest.source_statistics.international_count is not none else 'N/A' }}</div>
-      <div>chinese_count: {{ digest.source_statistics.chinese_count if digest.source_statistics.chinese_count is not none else 'N/A' }}</div>
-    </div>
-
-    <div class="footer">Generated by ai-news-digest-agent</div>
+<body style="margin:0; padding:0; background:#F6F7FB; color:#111827; font-family:Arial, Helvetica, sans-serif;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; line-height:1px;">
+    {{ report_window }} AI 研究、开源项目与产业信号简报。
   </div>
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F6F7FB; margin:0; padding:24px 0;">
+    <tr>
+      <td align="center" style="padding:0 12px;">
+        <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="width:600px; max-width:600px; background:#FFFFFF; border:1px solid #E5E7EB; border-radius:16px; overflow:hidden;">
+          <tr>
+            <td style="background:#111827; padding:30px 28px 26px 28px;">
+              <div style="font-size:12px; line-height:18px; letter-spacing:0.08em; text-transform:uppercase; color:#A5B4FC; font-weight:bold;">AI News Digest Agent</div>
+              <h1 class="hero-title" style="margin:8px 0 8px 0; font-size:30px; line-height:38px; color:#FFFFFF; font-weight:700;">AI Daily Brief</h1>
+              <div style="font-size:15px; line-height:24px; color:#D1D5DB;">每日 AI 研究、开源项目与产业情报</div>
+              <div style="margin-top:16px; font-size:13px; line-height:20px; color:#CBD5E1;">
+                日期：{{ digest.date }}&nbsp;&nbsp;|&nbsp;&nbsp;时间范围：{{ report_window }}&nbsp;&nbsp;|&nbsp;&nbsp;类型：{{ report_type }}{% if digest.topic %}&nbsp;&nbsp;|&nbsp;&nbsp;主题：{{ digest.topic }}{% endif %}
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="content" style="padding:18px 28px 6px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td class="metric-cell" width="25%" style="padding:0 6px 10px 0;">
+                    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:12px; background:#F9FAFB;">
+                      <div style="font-size:11px; line-height:16px; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">正文精选</div>
+                      <div style="font-size:24px; line-height:30px; color:#111827; font-weight:700;">{{ selected_count }}</div>
+                      <div style="font-size:11px; line-height:16px; color:#6B7280;">建议 {{ recommended_main_range }}</div>
+                    </div>
+                  </td>
+                  <td class="metric-cell" width="25%" style="padding:0 6px 10px 0;">
+                    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:12px; background:#F9FAFB;">
+                      <div style="font-size:11px; line-height:16px; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">附录补充</div>
+                      <div style="font-size:24px; line-height:30px; color:#111827; font-weight:700;">{{ digest.appendix | length }}</div>
+                      <div style="font-size:11px; line-height:16px; color:#6B7280;">建议 {{ recommended_appendix_range }}</div>
+                    </div>
+                  </td>
+                  <td class="metric-cell" width="25%" style="padding:0 6px 10px 0;">
+                    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:12px; background:#F9FAFB;">
+                      <div style="font-size:11px; line-height:16px; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">窗口</div>
+                      <div style="font-size:20px; line-height:30px; color:#111827; font-weight:700;">{{ lookback_hours }}h</div>
+                      <div style="font-size:11px; line-height:16px; color:#6B7280;">{{ report_type }}</div>
+                    </div>
+                  </td>
+                  {% if digest.source_statistics.source_count is defined %}
+                  <td class="metric-cell" width="25%" style="padding:0 0 10px 0;">
+                    <div style="border:1px solid #E5E7EB; border-radius:12px; padding:12px; background:#F9FAFB;">
+                      <div style="font-size:11px; line-height:16px; color:#6B7280; text-transform:uppercase; letter-spacing:0.06em;">来源</div>
+                      <div style="font-size:24px; line-height:30px; color:#111827; font-weight:700;">{{ digest.source_statistics.source_count }}</div>
+                    </div>
+                  </td>
+                  {% endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="content" style="padding:18px 28px 8px 28px;">
+              <h2 style="margin:0 0 4px 0; font-size:18px; line-height:26px; color:#111827;">今日最重要的 3 条信号</h2>
+              <p style="margin:0 0 14px 0; font-size:13px; line-height:20px; color:#6B7280;">以下 3 条从正文精选中提取，不是正文外新增内容。</p>
+              {% set top = namespace(count=0) %}
+              {% for group in digest.main_digest %}
+                {% for item in group.items %}
+                  {% if top.count < 3 %}
+                    {% set top.count = top.count + 1 %}
+                    {% set title_parts = split_title(item.title) %}
+                    <div style="border:1px solid #E5E7EB; border-radius:14px; padding:16px; margin:0 0 12px 0; background:#FFFFFF;">
+                      <div style="font-size:12px; line-height:18px; color:#4F46E5; font-weight:bold;">{{ group.category_name if group.category_name else '其他' }}</div>
+                      <h3 style="margin:5px 0 4px 0; font-size:16px; line-height:24px; color:#111827;">{{ title_parts.primary }}</h3>
+                      {% if title_parts.secondary %}
+                      <div style="margin:0 0 8px 0; font-size:14px; line-height:21px; color:#4B5563;">{{ title_parts.secondary }}</div>
+                      {% endif %}
+                      {% if item.summary %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#374151;">{{ item.summary }}</p>
+                      {% endif %}
+                      {% if item.why_it_matters %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>为什么重要：</strong>{{ item.why_it_matters }}</p>
+                      {% endif %}
+                      {% if item.links %}
+                      <div style="font-size:13px; line-height:20px;">
+                        {% for link in item.links %}
+                          <a href="{{ link }}" target="_blank" style="color:#4F46E5; text-decoration:none;">{{ link_label(link, item.source_names) }}</a>{% if not loop.last %}&nbsp;&nbsp;{% endif %}
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+              {% if top.count == 0 %}
+                <p style="margin:0; font-size:14px; line-height:22px; color:#6B7280;">暂无可展示的重点信号。</p>
+              {% endif %}
+            </td>
+          </tr>
+
+          <tr>
+            <td class="content" style="padding:8px 28px 8px 28px;">
+              {% for group in digest.main_digest %}
+                {% if group.items %}
+                  <h2 style="margin:22px 0 12px 0; padding-top:16px; border-top:1px solid #E5E7EB; font-size:18px; line-height:26px; color:#111827;">{{ group.category_name if group.category_name else '其他' }}</h2>
+                  {% for item in group.items %}
+                    {% set title_parts = split_title(item.title) %}
+                    <div style="border:1px solid #E5E7EB; border-radius:14px; padding:16px; margin:0 0 12px 0; background:#FFFFFF;">
+                      <h3 style="margin:0 0 4px 0; font-size:16px; line-height:24px; color:#111827;">{{ title_parts.primary }}</h3>
+                      {% if title_parts.secondary %}
+                      <div style="margin:0 0 8px 0; font-size:14px; line-height:21px; color:#4B5563;">{{ title_parts.secondary }}</div>
+                      {% endif %}
+                      {% if item.tags %}
+                      <div style="margin:0 0 10px 0;">
+                        {% for tag in item.tags %}
+                          <span style="display:inline-block; margin:0 6px 6px 0; padding:3px 8px; border-radius:999px; background:#EEF2FF; color:#3730A3; font-size:12px; line-height:18px;">{{ tag }}</span>
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                      {% if item.summary %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#374151;">{{ item.summary }}</p>
+                      {% endif %}
+                      {% if item.why_it_matters %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>为什么重要：</strong>{{ item.why_it_matters }}</p>
+                      {% endif %}
+                      {% if item.insights %}
+                      <p style="margin:0 0 8px 0; font-size:14px; line-height:22px; color:#4B5563;"><strong>趋势启示：</strong>{{ item.insights }}</p>
+                      {% endif %}
+                      {% if item.source_names %}
+                      <p style="margin:0 0 8px 0; font-size:13px; line-height:20px; color:#6B7280;">来源：{{ item.source_names | join('、') }}</p>
+                      {% endif %}
+                      {% if item.links %}
+                      <div style="font-size:13px; line-height:20px;">
+                        {% for link in item.links %}
+                          <a href="{{ link }}" target="_blank" style="color:#4F46E5; text-decoration:none;">{{ link_label(link, item.source_names) }}</a>{% if not loop.last %}&nbsp;&nbsp;{% endif %}
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            </td>
+          </tr>
+
+          <tr>
+            <td class="content" style="padding:8px 28px 8px 28px;">
+              <h2 style="margin:18px 0 12px 0; padding-top:16px; border-top:1px solid #E5E7EB; font-size:18px; line-height:26px; color:#111827;">附录：值得继续关注</h2>
+              {% if digest.appendix %}
+                {% for item in digest.appendix %}
+                  {% set title_parts = split_title(item.title) %}
+                  <div style="padding:0 0 12px 0; margin:0 0 12px 0; border-bottom:1px solid #F3F4F6;">
+                    <div style="font-size:14px; line-height:22px; color:#111827; font-weight:bold;">{{ loop.index }}. {{ title_parts.primary }}</div>
+                    {% if title_parts.secondary %}
+                    <div style="font-size:13px; line-height:21px; color:#4B5563;">{{ title_parts.secondary }}</div>
+                    {% endif %}
+                    {% if item.brief_summary %}
+                    <div style="font-size:13px; line-height:21px; color:#4B5563;">{{ item.brief_summary }}</div>
+                    {% endif %}
+                    <div style="font-size:13px; line-height:21px; color:#6B7280;">
+                      {% if item.source %}{{ item.source }}{% endif %}
+                      {% if item.link %}&nbsp;&nbsp;<a href="{{ item.link }}" target="_blank" style="color:#4F46E5; text-decoration:none;">{{ link_label(item.link, [item.source]) }}</a>{% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <p style="margin:0; font-size:14px; line-height:22px; color:#6B7280;">今日暂无高质量补充条目。</p>
+              {% endif %}
+            </td>
+          </tr>
+
+          {% if digest.source_statistics %}
+          <tr>
+            <td class="content" style="padding:8px 28px 22px 28px;">
+              <h2 style="margin:18px 0 12px 0; padding-top:16px; border-top:1px solid #E5E7EB; font-size:18px; line-height:26px; color:#111827;">Source Statistics</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E5E7EB; border-radius:12px; background:#F9FAFB;">
+                <tr>
+                  <td style="padding:12px; font-size:13px; line-height:22px; color:#4B5563;">
+                    {% if digest.source_statistics.total_candidates is defined %}<strong>total_candidates:</strong> {{ digest.source_statistics.total_candidates }}<br>{% endif %}
+                    {% if digest.source_statistics.cleaned_candidates is defined %}<strong>cleaned_candidates:</strong> {{ digest.source_statistics.cleaned_candidates }}<br>{% endif %}
+                    {% if digest.source_statistics.selected_items is defined %}<strong>selected_items:</strong> {{ digest.source_statistics.selected_items }}<br>{% endif %}
+                    {% if digest.source_statistics.source_count is defined %}<strong>source_count:</strong> {{ digest.source_statistics.source_count }}<br>{% endif %}
+                    {% if digest.source_statistics.international_count is defined and digest.source_statistics.international_count is not none %}<strong>international_count:</strong> {{ digest.source_statistics.international_count }}<br>{% endif %}
+                    {% if digest.source_statistics.chinese_count is defined and digest.source_statistics.chinese_count is not none %}<strong>chinese_count:</strong> {{ digest.source_statistics.chinese_count }}{% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <tr>
+            <td style="background:#F9FAFB; padding:18px 28px 24px 28px; border-top:1px solid #E5E7EB;">
+              <div style="font-size:13px; line-height:21px; color:#6B7280;">Generated by AI News Digest Agent.</div>
+              <div style="margin-top:6px; font-size:12px; line-height:20px; color:#9CA3AF;">本简报基于公开来源自动生成，重要信息建议点击原文链接核对。</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

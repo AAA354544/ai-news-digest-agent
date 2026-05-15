@@ -233,6 +233,34 @@ Improve digest quality and source balance toward "AI research progress + AI indu
 ### Status
 Pending verification
 
+## Optimization Round 1 Closure (Lightweight)
+
+### Goal
+Close high-value reliability and usability gaps without changing core architecture or introducing heavy services.
+
+### Changes
+- Config/security:
+  - Hardened env parsing in `src/config.py` (empty fallback, bool parsing, friendly integer errors, placeholder detection).
+  - Added `validate_runtime_config(mode)` and CLI `preflight` command.
+  - Marked `DEEPSEEK_*` / `QWEN_*` as reserved/future in `.env.example`.
+- GitHub Actions:
+  - Added `workflow_dispatch` inputs (`topic`, `send_email`, `llm_limit`).
+  - Added `concurrency`, `timeout-minutes`, preflight config check, and artifact upload.
+  - Kept scheduled daily auto-send behavior and added optional manual report-only mode.
+- Credibility/statistics:
+  - Strengthened prompt constraints to reduce hallucination risk.
+  - Added program-side statistics correction and appendix URL dedup against main digest.
+- Reporting UX:
+  - Upgraded Markdown/HTML report templates for clearer structure and email-friendly rendering.
+- Docs/tests:
+  - Restructured README sections for open-source onboarding.
+  - Added `docs/acceptance_checklist.md`.
+  - Added `tests/manual_test_config_runtime.py`.
+  - Updated CLI `status` text to match current project phase.
+
+### Verification Status
+Pending full manual verification (no false “all passed” claim).
+
 ## Optimization Round 3 - Recipient Management + Streamlit Email Targeting
 
 ### Goal
